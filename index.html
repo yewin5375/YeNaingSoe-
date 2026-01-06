@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Restaurant Admin Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar Menu -->
+  <aside class="sidebar">
+    <h2 class="logo">Amara Admin</h2>
+    <nav>
+      <ul>
+        <li class="active" data-page="dashboard">Dashboard</li>
+        <li data-page="orders">Orders</li>
+        <li data-page="menu">Menu</li>
+        <li data-page="customers">Customers</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <h1 id="page-title">Dashboard</h1>
+      <div class="topbar-right">
+        <!-- Notification bell -->
+        <div class="notif-wrapper">
+          <span id="notif-dot" class="notif-dot hidden"></span>
+          <button id="notif-btn" class="icon-btn">
+            🔔
+          </button>
+          <div id="notif-dropdown" class="notif-dropdown hidden">
+            <!-- notification items will append here -->
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- DASHBOARD PAGE -->
+    <section id="page-dashboard" class="page visible">
+      <div class="cards-row">
+        <div class="card">
+          <h3>Total Orders</h3>
+          <p id="total-orders">0</p>
+        </div>
+        <div class="card">
+          <h3>Total Revenue</h3>
+          <p id="total-revenue">$0</p>
+        </div>
+        <div class="card">
+          <h3>Total Customers</h3>
+          <p id="total-customers">0</p>
+        </div>
+        <div class="card">
+          <h3>Total Menu</h3>
+          <p id="total-menu">0</p>
+        </div>
+      </div>
+
+      <div class="two-cols">
+        <div class="card">
+          <h3>New Orders</h3>
+          <ul id="dash-new-orders"></ul>
+        </div>
+        <div class="card">
+          <h3>Live Pending Orders</h3>
+          <ul id="dash-pending-orders"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Orders</h3>
+        <ul id="dash-recent-orders"></ul>
+      </div>
+    </section>
+
+    <!-- ORDERS PAGE -->
+    <section id="page-orders" class="page">
+      <div class="tabs">
+        <button class="tab-btn active" data-status="new">New</button>
+        <button class="tab-btn" data-status="pending">Pending</button>
+        <button class="tab-btn" data-status="finished">Finished</button>
+      </div>
+
+      <div id="order-cards" class="cards-grid">
+        <!-- Order cards append here -->
+      </div>
+    </section>
+
+    <!-- MENU PAGE -->
+    <section id="page-menu" class="page">
+      <div class="card">
+        <h3>Add / Edit Menu</h3>
+        <form id="menu-form">
+          <input type="hidden" id="menu-id" />
+          <div class="form-row">
+            <label>Image</label>
+            <input type="file" id="menu-image" accept="image/*" />
+          </div>
+          <div class="form-row">
+            <label>Name</label>
+            <input type="text" id="menu-name" required />
+          </div>
+          <div class="form-row">
+            <label>Price</label>
+            <input type="number" id="menu-price" required />
+          </div>
+          <div class="form-row">
+            <label>Stock</label>
+            <input type="number" id="menu-stock" required />
+          </div>
+          <button type="submit">Save Menu</button>
+        </form>
+      </div>
+
+      <h3>Menu Items</h3>
+      <div id="menu-list" class="menu-grid">
+        <!-- menu items here -->
+      </div>
+    </section>
+
+    <!-- CUSTOMERS PAGE -->
+    <section id="page-customers" class="page">
+      <div class="two-cols">
+        <div class="card">
+          <h3>Customer List</h3>
+          <ul id="customer-list"></ul>
+        </div>
+        <div class="card">
+          <h3>Customer Profile</h3>
+          <div id="customer-profile">
+            <p>Select customer</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-cols">
+        <div class="card">
+          <h3>Order History</h3>
+          <ul id="customer-orders"></ul>
+        </div>
+        <div class="card">
+          <h3>Voucher Details</h3>
+          <ul id="customer-vouchers"></ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
