@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Food Order System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Tailwind အပြင် ထပ်ဖြည့်ချင်တဲ့ Custom CSS */
+        body { font-family: 'Pyidaungsu', sans-serif, system-ui; }
+        .menu-card { transition: transform 0.2s; }
+        .menu-card:hover { transform: translateY(-5px); }
+        #cart-modal { backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <nav class="bg-orange-500 p-4 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black tracking-tight italic">FOODIE</h1>
+            <button onclick="toggleCart()" class="relative bg-white text-orange-600 px-5 py-2 rounded-full font-bold shadow-sm hover:bg-orange-50 transition flex items-center gap-2">
+                <span>🛒 Cart</span>
+                <span id="cart-count" class="bg-orange-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <header class="max-w-4xl mx-auto p-6 text-center">
+        <h2 class="text-3xl font-bold text-slate-900">စားသောက်ဖွယ်ရာများ</h2>
+        <p class="text-slate-500">နှစ်သက်ရာကို ရွေးချယ်ပြီး Order တင်နိုင်ပါပြီ။</p>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 mb-10">
+        <div id="menu-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="animate-pulse bg-white p-6 rounded-2xl h-32 shadow-sm"></div>
+            <div class="animate-pulse bg-white p-6 rounded-2xl h-32 shadow-sm"></div>
+        </div>
+    </main>
+
+    <div id="cart-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[100] transition-opacity">
+        <div class="bg-white w-full max-w-md ml-auto h-full p-6 shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-2xl font-bold">🛒 ခြင်းတောင်း</h2>
+                <button onclick="toggleCart()" class="text-slate-400 hover:text-slate-900 text-3xl font-light">&times;</button>
+            </div>
+            
+            <div id="cart-items" class="flex-1 overflow-y-auto space-y-4 pr-2">
+                <p class="text-center text-slate-400 py-10">ခြင်းတောင်းထဲမှာ ဘာမှမရှိသေးပါ။</p>
+            </div>
+
+            <div class="border-t pt-6 mt-4">
+                <div class="flex justify-between text-xl font-bold mb-6 px-2">
+                    <span>Total Amount:</span>
+                    <span class="text-orange-600"><span id="cart-total">0</span> MMK</span>
+                </div>
+
+                <form id="order-form" class="space-y-4 bg-slate-50 p-4 rounded-2xl">
+                    <div class="grid grid-cols-1 gap-4">
+                        <input type="text" id="cust-name" placeholder="သင့်နာမည်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+                        <input type="tel" id="cust-phone" placeholder="ဖုန်းနံပါတ်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+                        
+                        <div class="flex gap-3">
+                            <div class="w-1/2">
+                                <label class="text-xs font-bold text-slate-400 ml-1">Pickup Date</label>
+                                <input type="date" id="pickup-date" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+                            </div>
+                            <div class="w-1/2">
+                                <label class="text-xs font-bold text-slate-400 ml-1">Pickup Time</label>
+                                <input type="time" id="pickup-time" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+                            </div>
+                        </div>
+                        
+                        <textarea id="note" rows="2" placeholder="မှတ်ချက် (ဥပမာ- အစပ်မစားပါ)" class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition"></textarea>
+                    </div>
+                    
+                    <button type="submit" id="submit-btn" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 active:scale-95 transition-all shadow-lg shadow-orange-200">
+                        Confirm Order
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs'; 
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let menuData = [];
+        let cart = [];
+
+        // --- Fetch Menu ---
+        async function fetchMenu() {
+    console.log("Fetching menu..."); // debug
+    const { data, error } = await _supabase.from('menus').select('*').eq('is_available', true);
+    
+    if (error) {
+        console.error("Supabase Error:", error); // ဒီနေရာမှာ error ပြပါလိမ့်မယ်
+        document.getElementById('menu-container').innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+        return;
+    }
+    
+    console.log("Data received:", data); // data ရမရ စစ်တာပါ
+    menuData = data;
+    renderMenu();
+}
+
+
+        function renderMenu() {
+    const container = document.getElementById('menu-container');
+    container.innerHTML = menuData.map(item => `
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+            <img src="${item.image_url}" alt="${item.name}" class="w-full h-48 object-cover">
+            <div class="p-4 flex justify-between items-center">
+                <div class="flex-1">
+                    <h3 class="font-extrabold text-lg text-slate-800">${item.name}</h3>
+                    <p class="text-orange-500 font-bold text-md">${item.price.toLocaleString()} MMK</p>
+                </div>
+                <button onclick="addToCart('${item.id}')" class="bg-orange-50 text-orange-600 px-4 py-2 rounded-2xl font-bold hover:bg-orange-500 hover:text-white transition-all active:scale-90">
+                    + Add
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+
+        // --- Cart Functions ---
+        window.addToCart = (id) => {
+            const item = menuData.find(m => m.id === id);
+            const inCart = cart.find(c => c.id === id);
+            if (inCart) { inCart.qty += 1; } 
+            else { cart.push({ ...item, qty: 1 }); }
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            const cartItems = document.getElementById('cart-items');
+            const cartCount = document.getElementById('cart-count');
+            const cartTotal = document.getElementById('cart-total');
+
+            cartCount.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
+            
+            if (cart.length === 0) {
+                cartItems.innerHTML = `<p class="text-center text-slate-400 py-10 italic">ခြင်းတောင်းထဲမှာ ဘာမှမရှိသေးပါ။</p>`;
+                cartTotal.innerText = "0";
+                return;
+            }
+
+            let total = 0;
+            cartItems.innerHTML = cart.map((item, index) => {
+                total += item.price * item.qty;
+                return `
+                    <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                <button onclick="changeQty(${index}, -1)" class="px-2 bg-white rounded border">-</button>
+                                <span class="mx-2 font-bold">${item.qty}</span>
+                                <button onclick="changeQty(${index}, 1)" class="px-2 bg-white rounded border">+</button>
+                                <span class="ml-4 font-semibold text-orange-600">${(item.price * item.qty).toLocaleString()} MMK</span>
+                            </p>
+                        </div>
+                        <button onclick="removeFromCart(${index})" class="text-red-400 hover:text-red-600 p-2">&times;</button>
+                    </div>
+                `;
+            }).join('');
+            cartTotal.innerText = total.toLocaleString();
+        }
+
+        window.changeQty = (index, amount) => {
+            cart[index].qty += amount;
+            if (cart[index].qty <= 0) cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        window.removeFromCart = (index) => {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        window.toggleCart = () => {
+            const modal = document.getElementById('cart-modal');
+            modal.classList.toggle('hidden');
+        };
+
+        // --- Submit Order ---
+        document.getElementById('order-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (cart.length === 0) return alert("ခြင်းတောင်းထဲမှာ ပစ္စည်းအရင်ထည့်ပါ!");
+
+            const btn = document.getElementById('submit-btn');
+            btn.innerText = "Sending...";
+            btn.disabled = true;
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            
+            const { data: order, error: orderErr } = await _supabase
+                .from('orders')
+                .insert([{
+                    customer_name: document.getElementById('cust-name').value,
+                    customer_phone: document.getElementById('cust-phone').value,
+                    pickup_date: document.getElementById('pickup-date').value,
+                    pickup_time: document.getElementById('pickup-time').value,
+                    note: document.getElementById('note').value,
+                    total_amount: total
+                }])
+                .select().single();
+
+            if (orderErr) {
+                alert("Order error: " + orderErr.message);
+                btn.innerText = "Confirm Order";
+                btn.disabled = false;
+                return;
+            }
+
+            const itemsToInsert = cart.map(item => ({
+                order_id: order.id,
+                menu_id: item.id,
+                quantity: item.qty,
+                unit_price: item.price
+            }));
+
+            await _supabase.from('order_items').insert(itemsToInsert);
+
+            alert("Order တင်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးတင်ပါတယ်။");
+            cart = [];
+            updateCartUI();
+            toggleCart();
+            document.getElementById('order-form').reset();
+            btn.innerText = "Confirm Order";
+            btn.disabled = false;
+        });
+
+        fetchMenu();
+    </script>
+</body>
+</html>
+ 
