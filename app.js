@@ -144,65 +144,76 @@ async function setOrderStatusTab(status) {
     await renderOrderCards(status);
 }
 
-// အော်ဒါကတ်များ ဆွဲထုတ်သည့် Function (နာမည်ကို သေချာအောင် ပြန်စစ်ပါ)
+// အော်ဒါကတ်များ ဆွဲထုတ်သည့်// --- 1. ORDERS LOGIC (စနစ်တကျ ပြင်ဆင်ပြီး) ---
 async function renderOrderCards(status) {
     const container = document.getElementById("order-cards");
-    container.innerHTML = `<div class="text-center py-10">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-        <p class="text-xs text-slate-400 mt-2">Loading orders...</p>
-    </div>`;
+    container.innerHTML = `<div class="text-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div></div>`;
 
+    // order_items ရော menus table ပါ join ဆွဲထားပါတယ်
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select('*, order_items(*, menus(*))')
+        .select(`
+            *,
+            order_items (
+                quantity,
+                menus (name, price)
+            )
+        `)
         .eq('status', status)
         .order('created_at', { ascending: false });
 
-    if (error) {
-        container.innerHTML = `<p class="text-center text-red-500 py-10">Error loading orders</p>`;
+    if (error || !orders) {
+        container.innerHTML = "<p class='text-center py-10 text-slate-400'>အော်ဒါများ ဆွဲထုတ်ရာတွင် အမှားရှိနေပါသည်</p>";
         return;
     }
 
-    if (!orders || orders.length === 0) {
-        container.innerHTML = `<div class="text-center py-20 text-slate-300 italic">
-            <i data-lucide="package-open" class="mx-auto w-12 h-12 mb-2"></i>
-            <p>အော်ဒါမရှိသေးပါ</p>
-        </div>`;
-        lucide.createIcons();
-        return;
-    }
+    container.innerHTML = orders.map(o => {
+        // Item စာရင်းကို သေချာအောင် ပြန်စီခြင်း
+        const itemsHtml = o.order_items.map(i => `
+            <div class="flex justify-between text-[11px] border-b border-dashed border-slate-200 py-1">
+                <span>${i.menus?.name} (x${i.quantity})</span>
+                <span>${(i.menus?.price * i.quantity).toLocaleString()} Ks</span>
+            </div>
+        `).join('');
 
-    container.innerHTML = orders.map(o => `
+        return `
         <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 space-y-3">
             <div class="flex justify-between items-start" onclick="viewCustomerDetail('${o.customer_phone}')">
                 <div>
                     <h4 class="font-bold text-lg">${o.customer_name}</h4>
                     <p class="text-xs text-slate-400">📞 ${o.customer_phone}</p>
                 </div>
-                <div class="text-right font-black text-orange-500">${o.total_amount} Ks</div>
+                <div class="text-right">
+                    <div class="font-black text-orange-500">${o.total_amount.toLocaleString()} Ks</div>
+                    <p class="text-[9px] text-slate-300">${new Date(o.created_at).toLocaleString()}</p>
+                </div>
             </div>
-            <div class="bg-slate-50 p-3 rounded-2xl text-[11px] text-slate-600 border border-slate-100">
-                ${o.order_items.map(i => `• ${i.menus?.name} (x${i.quantity})`).join('<br>')}
+            
+            <div class="bg-slate-50 p-3 rounded-2xl space-y-1">
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Order Details</p>
+                ${itemsHtml}
             </div>
-            <div class="flex gap-2">
-                ${status === 'new' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition shadow-lg shadow-orange-100">Accept Order</button>` : ''}
-                ${status === 'pending' ? `<button onclick="updateStatus('${o.id}', 'finished')" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition shadow-lg shadow-green-100">Finish Order</button>` : ''}
-                ${status === 'finished' ? `<div class="w-full text-center py-2 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-bold uppercase">Completed Order</div>` : ''}
+
+            <div class="flex gap-2 pt-1">
+                ${status === 'new' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-xl text-xs">Accept Order</button>` : ''}
+                ${status === 'pending' ? `<button onclick="updateStatus('${o.id}', 'finished')" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-xs">Finish Order</button>` : ''}
+                <button onclick="downloadVoucher('${o.id}')" class="bg-slate-100 p-3 rounded-xl"><i data-lucide="printer" class="w-4 h-4"></i></button>
             </div>
         </div>
-    `).join('');
-    
+        `;
+    }).join('');
     lucide.createIcons();
-}
+} Function (နာမည်ကို သေချာအောင် ပြန်စစ်ပါ)
 
-// Status ပြောင်းလဲသည့် Function
+
+// Accept/Finish နှိပ်ရင် Status ပြောင်းဖို့
 async function updateStatus(id, nextStatus) {
     const { error } = await _supabase.from('orders').update({ status: nextStatus }).eq('id', id);
     if (!error) {
-        // အောင်မြင်ရင် လက်ရှိ Tab ကို Refresh လုပ်မယ်
-        const currentTab = document.querySelector('.tab-btn.active').getAttribute('data-status');
-        renderOrderCards(currentTab);
-        calcDashboard(); // Dashboard က အရေအတွက်တွေကိုပါ update လုပ်မယ်
+        // Tab ပြောင်းသွားအောင် active ဖြစ်နေတဲ့ status ကို ပြန်ရှာပြီး render လုပ်ပေးမယ်
+        const currentActiveStatus = document.querySelector('.tab-btn.active').getAttribute('data-status');
+        await renderOrderCards(currentActiveStatus);
+        calcDashboard();
     }
 }
 
@@ -273,61 +284,69 @@ async function renderCustomerList() {
     `).join('');
 }
 
+// --- 2. VOUCHER PRINT & DOWNLOAD (PDF) ---
+async function downloadVoucher(orderId) {
+    const { data: o } = await _supabase.from('orders').select('*, order_items(*, menus(*))').eq('id', orderId).single();
+    if (!o) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 150] }); // 80mm thermal paper size
+
+    doc.setFontSize(14);
+    doc.text("Minsa Grilled Chicken", 40, 10, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Order ID: #${o.id.slice(0, 8)}`, 10, 20);
+    doc.text(`Date: ${new Date(o.created_at).toLocaleDateString()}`, 10, 25);
+    doc.text(`Customer: ${o.customer_name}`, 10, 30);
+    doc.text("------------------------------------------", 10, 35);
+
+    let y = 42;
+    o.order_items.forEach(i => {
+        doc.text(`${i.menus.name} x ${i.quantity}`, 10, y);
+        doc.text(`${(i.menus.price * i.quantity).toLocaleString()} Ks`, 70, y, { align: "right" });
+        y += 7;
+    });
+
+    doc.text("------------------------------------------", 10, y);
+    doc.setFontSize(12);
+    doc.text(`Total: ${o.total_amount.toLocaleString()} Ks`, 70, y + 10, { align: "right" });
+    
+    // Auto Print Dialog
+    doc.autoPrint();
+    window.open(doc.output('bloburl'), '_blank');
+}
+
+// --- 3. CUSTOMER DETAIL (အသေးစိတ်ပြသရန်) ---
 async function viewCustomerDetail(phone) {
-    switchPage('customers'); // Deep Link
+    switchPage('customers');
     const detailBox = document.getElementById("customer-detail-section");
     detailBox.classList.remove("hidden");
     
-    const { data: orders } = await _supabase.from('orders').select('*').eq('customer_phone', phone).order('created_at', { ascending: false });
+    const { data: orders } = await _supabase.from('orders').select('*, order_items(*, menus(*))').eq('customer_phone', phone).order('created_at', { ascending: false });
     
-    if(!orders) return;
-    
-    const totalSpent = orders.reduce((s, o) => s + (o.total_amount || 0), 0);
-    
+    if(!orders || orders.length === 0) return;
+
     document.getElementById("customer-profile-info").innerHTML = `
-        <h3 class="font-black text-xl text-slate-800">${orders[0].customer_name}</h3>
-        <p class="text-xs text-slate-400 font-mono italic">${phone}</p>
+        <h3 class="font-bold text-lg">${orders[0].customer_name}</h3>
+        <p class="text-xs text-slate-400">📞 ${phone}</p>
     `;
-    
-    document.getElementById("cust-total-amount").textContent = totalSpent.toLocaleString() + " Ks";
-    document.getElementById("cust-total-orders").textContent = orders.length;
 
-    const historyUl = document.getElementById("customer-order-history");
-    historyUl.innerHTML = orders.map(o => `
-        <li class="p-3 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100">
-            <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase">#${o.id.slice(0,5)}</p>
-                <p class="text-[10px] text-slate-300">${new Date(o.created_at).toLocaleDateString()}</p>
+    document.getElementById("cust-total-amount").innerText = orders.reduce((s, o) => s + o.total_amount, 0).toLocaleString() + " Ks";
+    document.getElementById("cust-total-orders").innerText = orders.length;
+
+    document.getElementById("customer-order-history").innerHTML = orders.map(o => `
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-[11px] mb-2">
+            <div class="flex justify-between font-bold text-orange-600 mb-1">
+                <span>#${o.id.slice(0,8)}</span>
+                <span>${o.total_amount.toLocaleString()} Ks</span>
             </div>
-            <div class="text-right">
-                <p class="font-black text-xs text-orange-600">${o.total_amount} Ks</p>
-                <p class="text-[9px] uppercase font-bold text-slate-300">${o.status}</p>
+            <div class="text-slate-500 italic mb-1">
+                ${o.order_items.map(i => `${i.menus?.name} (x${i.quantity})`).join(', ')}
             </div>
-        </li>
+            <div class="text-[9px] text-slate-300 text-right">${new Date(o.created_at).toLocaleString()}</div>
+        </div>
     `).join('');
-    
-    detailBox.scrollIntoView({ behavior: 'smooth' });
 }
-
-// Form Handlers
-document.getElementById("menu-form").onsubmit = async (e) => {
-    e.preventDefault();
-    const id = document.getElementById("menu-id").value;
-    const data = {
-        name: document.getElementById("menu-name").value,
-        price: Number(document.getElementById("menu-price").value),
-        stock: Number(document.getElementById("menu-stock").value),
-        image_url: document.getElementById("menu-image-url").value
-    };
-
-    if (id) await _supabase.from('menus').update(data).eq('id', id);
-    else await _supabase.from('menus').insert([data]);
-
-    document.getElementById("menu-form").reset();
-    document.getElementById("menu-id").value = "";
-    renderMenuList();
-};
-
 function editMenu(id, name, price, stock, url) {
     document.getElementById("menu-id").value = id;
     document.getElementById("menu-name").value = name;
