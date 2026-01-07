@@ -2,7 +2,7 @@ const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- ၁။ စာမျက်နှာ ကူးပြောင်းခြင်း ---
+// --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
 function switchPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
     const targetPage = document.getElementById('page-' + pageId);
@@ -11,158 +11,212 @@ function switchPage(pageId) {
     document.getElementById('page-title').innerText = pageId.replace('-', ' ').toUpperCase();
     localStorage.setItem('lastPage', pageId);
 
-    // Sidebar ပိတ်ရန်
-    const sb = document.getElementById('sidebar');
-    if (!sb.classList.contains('closed')) toggleSidebar();
-
-    // Data Load လုပ်ရန်
     if (pageId === 'dashboard') calcDashboard();
     if (pageId === 'menu') renderMenuList();
     if (pageId === 'customers') renderCustomerList();
-    if (pageId === 'orders') {
-        const activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-status') || 'new';
-        renderOrderCards(activeTab);
-    }
 }
-
-// --- ၂။ NOTIFICATION SYSTEM (အသစ်) ---
+// --- ၄။ NOTIFICATION & REAL-TIME ---
 function addNotification(msg, type = 'order') {
     const dot = document.getElementById('notif-dot');
     const list = document.getElementById('notif-list');
-    
-    // အနီစက်ပြရန်
     dot.classList.remove('hidden');
 
-    // စာရင်းထဲထည့်ရန် (နှိပ်ရင် သက်ဆိုင်ရာ Page ကိုသွားဖို့ onclick ပါတယ်)
     const newNotif = document.createElement('div');
-    newNotif.className = "p-3 mb-2 rounded-xl text-xs cursor-pointer transition active:scale-95 " + 
-                        (type === 'order' ? "bg-orange-50 text-orange-600 border border-orange-100" : "bg-red-50 text-red-600 border border-red-100");
-    
+    newNotif.className = `p-3 mb-2 rounded-xl text-[11px] cursor-pointer border ${type === 'order' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-red-50 text-red-600 border-red-100'}`;
     newNotif.innerHTML = `<b>${type === 'order' ? '🔔 New Order' : '⚠️ Stock Alert'}</b><br>${msg}`;
     
-    // နှိပ်လိုက်ရင် လုပ်ဆောင်မည့်အချက်
     newNotif.onclick = () => {
-        if(type === 'order') {
-            switchPage('orders');
-            setOrderStatusTab('new');
-        } else {
-            switchPage('menu');
-        }
-        toggleNotif(); // Dropdown ပိတ်ရန်
+        if(type === 'order') { switchPage('orders'); setOrderStatusTab('new'); } 
+        else { switchPage('menu'); }
+        document.getElementById('notif-dropdown').classList.add('hidden');
     };
 
-    // အပေါ်ဆုံးကနေ စာရင်းသွင်းရန်
-    if (list.querySelector('p')) list.innerHTML = ''; // "သတိပေးချက်မရှိ" စာသားဖျက်ရန်
+    if (list.innerHTML.includes('သတိပေးချက်မရှိ')) list.innerHTML = '';
     list.insertBefore(newNotif, list.firstChild);
 }
+// --- ၂။ IMAGE UPLOAD LOGIC ---
+async function uploadImage(file) {
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data, error } = await _supabase.storage
+        .from('menu-images')
+        .upload(fileName, file);
+    if (error) {
+        console.error("Upload error:", error);
+        return null;
+    }
+    const { data: publicUrl } = _supabase.storage.from('menu-images').getPublicUrl(fileName);
+    return publicUrl.publicUrl;
+}
 
-// ခေါင်းလောင်းနှိပ်ရင် အနီစက်ဖျောက်ရန်
-function toggleNotif() {
-    const drop = document.getElementById('notif-dropdown');
-    drop.classList.toggle('hidden');
-    if (drop.classList.contains('hidden')) {
-        // ဖတ်ပြီးသားဖြစ်သွားလို့ အနီစက်ဖျောက်မယ်
-        document.getElementById('notif-dot').classList.add('hidden');
+// --- ၃။ MENU MANAGEMENT (Add/Edit/Delete) ---
+document.getElementById('menu-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Saving...";
+
+    const id = document.getElementById('menu-id').value;
+    const file = document.getElementById('menu-image-file').files[0];
+    let imageUrl = document.getElementById('menu-image-url').value;
+
+    // အကယ်၍ ဖုန်းထဲက ပုံရွေးထားရင် Upload တင်မယ်
+    if (file) {
+        const uploadedUrl = await uploadImage(file);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+    }
+
+    const data = {
+        name: document.getElementById('menu-name').value,
+        price: Number(document.getElementById('menu-price').value),
+        stock: Number(document.getElementById('menu-stock').value),
+        image_url: imageUrl
+    };
+
+    let error;
+    if (id) {
+        const res = await _supabase.from('menus').update(data).eq('id', id);
+        error = res.error;
+    } else {
+        const res = await _supabase.from('menus').insert([data]);
+        error = res.error;
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Save Item";
+
+    if (!error) {
+        resetMenuForm();
+        switchPage('menu');
+    } else {
+        alert("Error saving menu item.");
+    }
+};
+
+function editMenu(id, name, price, stock, url) {
+    document.getElementById('menu-id').value = id;
+    document.getElementById('menu-name').value = name;
+    document.getElementById('menu-price').value = price;
+    document.getElementById('menu-stock').value = stock;
+    document.getElementById('menu-image-url').value = url;
+    document.getElementById('form-title').innerText = "Edit Menu Item";
+    switchPage('add-menu');
+}
+
+async function deleteMenu(id) {
+    if (confirm('ဒီဟင်းပွဲကို ဖျက်မှာ သေချာပါသလား?')) {
+        await _supabase.from('menus').delete().eq('id', id);
+        renderMenuList();
     }
 }
 
-// --- ၃။ Real-time Order Listener ---
-_supabase.channel('orders')
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-    // ၁။ အသံပေးရန်
-    const sound = document.getElementById('order-sound');
-    if(sound) sound.play().catch(e => console.log("Sound blocked by browser"));
+function resetMenuForm() {
+    document.getElementById('menu-form').reset();
+    document.getElementById('menu-id').value = '';
+    document.getElementById('form-title').innerText = "Add New Item";
+}
 
-    // ၂။ Notification ထဲစာထည့်ရန်
-    addNotification(`Order from ${payload.new.customer_name} (${payload.new.total_amount} Ks)`);
-
-    // ၃။ လက်ရှိ Page က Dashboard သို့မဟုတ် Orders ဆိုရင် data ချက်ချင်း update လုပ်ရန်
-    const lastP = localStorage.getItem('lastPage');
-    if(lastP === 'dashboard') calcDashboard();
-    if(lastP === 'orders') renderOrderCards('new');
-  })
-  .subscribe();
-
-// --- ၄။ ORDERS & STATUS LOGIC ---
-async function renderOrderCards(status) {
-    const container = document.getElementById("order-cards");
-    container.innerHTML = `<div class="text-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div></div>`;
-
-    const { data: orders } = await _supabase
-        .from('orders')
-        .select('*, order_items(*, menus(*))')
-        .eq('status', status)
-        .order('created_at', { ascending: false });
-
-    if (!orders || orders.length === 0) {
-        container.innerHTML = "<p class='text-center py-20 text-slate-300 italic'>အော်ဒါမရှိသေးပါ</p>";
-        return;
-    }
-
-    container.innerHTML = orders.map(o => `
-        <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-4">
-            <div class="flex justify-between items-start mb-3">
-                <div onclick="viewCustomerDetail('${o.customer_phone}')">
-                    <h4 class="font-bold text-lg text-slate-800">${o.customer_name}</h4>
-                    <p class="text-xs text-slate-400">📞 ${o.customer_phone}</p>
-                </div>
-                <div class="text-right font-black text-orange-500">${o.total_amount.toLocaleString()} Ks</div>
+async function renderMenuList() {
+    const { data: menus } = await _supabase.from('menus').select('*').order('name');
+    const container = document.getElementById('menu-list');
+    container.innerHTML = menus.map(m => `
+        <div class="bg-white p-4 rounded-3xl border flex gap-4 items-center shadow-sm">
+            <img src="${m.image_url || 'https://via.placeholder.com/80'}" class="w-20 h-20 rounded-2xl object-cover bg-slate-100 shadow-inner">
+            <div class="flex-1">
+                <h4 class="font-bold text-slate-700">${m.name}</h4>
+                <p class="text-orange-500 font-bold text-sm">${m.price.toLocaleString()} Ks</p>
+                <p class="text-[10px] text-slate-400">Stock: ${m.stock}</p>
             </div>
-            <div class="bg-slate-50 p-3 rounded-2xl mb-3 text-[11px] text-slate-600">
-                ${o.order_items.map(i => `• ${i.menus?.name} (x${i.quantity})`).join('<br>')}
-            </div>
-            <div class="flex gap-2">
-                ${status === 'new' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition">Accept</button>` : ''}
-                ${status === 'pending' ? `<button onclick="updateStatus('${o.id}', 'finished')" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition">Finish</button>` : ''}
-                <button onclick="downloadVoucher('${o.id}')" class="bg-slate-100 p-3 rounded-xl active:bg-slate-200 transition"><i data-lucide="printer" class="w-4 h-4"></i></button>
+            <div class="flex flex-col gap-2">
+                <button onclick="editMenu('${m.id}', '${m.name}', ${m.price}, ${m.stock}, '${m.image_url}')" class="p-2 bg-blue-50 text-blue-500 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="deleteMenu('${m.id}')" class="p-2 bg-red-50 text-red-500 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
         </div>
     `).join('');
     lucide.createIcons();
 }
 
-async function setOrderStatusTab(status) {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-status') === status);
+// --- ၄။ VOUCHER & CUSTOMER DETAIL ---
+async function downloadVoucher(id) {
+    const { data: o } = await _supabase.from('orders').select('*, order_items(*, menus(*))').eq('id', id).single();
+    if (!o) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
+
+    doc.setFontSize(14);
+    doc.text("Minsa Grilled Chicken", 40, 10, { align: "center" });
+    doc.setFontSize(9);
+    doc.text(`ID: #${o.id.slice(0, 8)}`, 10, 20);
+    doc.text(`Date: ${new Date(o.created_at).toLocaleDateString()}`, 10, 25);
+    doc.text(`Customer: ${o.customer_name}`, 10, 30);
+    doc.text("------------------------------------------", 10, 35);
+
+    let y = 42;
+    o.order_items.forEach(i => {
+        doc.text(`${i.menus?.name || 'Item'} x ${i.quantity}`, 10, y);
+        doc.text(`${((i.menus?.price || 0) * i.quantity).toLocaleString()} Ks`, 70, y, { align: "right" });
+        y += 7;
     });
-    await renderOrderCards(status);
+
+    doc.text("------------------------------------------", 10, y);
+    doc.setFontSize(11);
+    doc.text(`Total: ${o.total_amount.toLocaleString()} Ks`, 70, y + 10, { align: "right" });
+    
+    window.open(doc.output('bloburl'), '_blank');
 }
 
-async function updateStatus(id, nextStatus) {
-    await _supabase.from('orders').update({ status: nextStatus }).eq('id', id);
-    const currentTab = document.querySelector('.tab-btn.active').getAttribute('data-status');
-    renderOrderCards(currentTab);
-    calcDashboard();
+async function viewCustomerDetail(phone) {
+    switchPage('customers');
+    const detailBox = document.getElementById("customer-detail-section");
+    detailBox.classList.remove("hidden");
+    
+    const { data: orders } = await _supabase.from('orders').select('*, order_items(*, menus(*))').eq('customer_phone', phone).order('created_at', { ascending: false });
+    
+    if(!orders || orders.length === 0) return;
+
+    document.getElementById("customer-profile-info").innerHTML = `
+        <h3 class="font-bold text-lg">${orders[0].customer_name}</h3>
+        <p class="text-xs text-slate-400">📞 ${phone}</p>
+    `;
+
+    document.getElementById("cust-total-amount").innerText = orders.reduce((s, o) => s + o.total_amount, 0).toLocaleString() + " Ks";
+    document.getElementById("cust-total-orders").innerText = orders.length;
+
+    document.getElementById("customer-order-history").innerHTML = orders.map(o => `
+        <div class="bg-white p-4 rounded-2xl border mb-3 shadow-sm">
+            <div class="flex justify-between font-bold text-orange-600 mb-2">
+                <span class="text-xs">#${o.id.slice(0,8)}</span>
+                <span class="text-sm">${o.total_amount.toLocaleString()} Ks</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mb-2">
+                ${o.order_items.map(i => `• ${i.menus?.name} (x${i.quantity})`).join('<br>')}
+            </div>
+            <button onclick="downloadVoucher('${o.id}')" class="text-[10px] text-blue-500 font-bold flex items-center gap-1">
+                <i data-lucide="printer" class="w-3 h-3"></i> Print Voucher
+            </button>
+        </div>
+    `).join('');
+    lucide.createIcons();
 }
 
-// --- ၅။ DASHBOARD & OTHERS ---
+// --- ၅။ REAL-TIME & DASHBOARD ---
 async function calcDashboard() {
     const { data: orders } = await _supabase.from('orders').select('*');
     if(!orders) return;
     document.getElementById('total-orders').innerText = orders.length;
     document.getElementById('total-revenue').innerText = orders.reduce((s,o) => s + o.total_amount, 0).toLocaleString() + " Ks";
     
-    // Recent Orders List
     const { data: recent } = await _supabase.from('orders').select('*').order('created_at', {ascending: false}).limit(5);
     document.getElementById('dash-recent-orders').innerHTML = recent.map(o => `
-        <li class="flex justify-between items-center bg-white p-3 rounded-2xl border mb-2 shadow-sm text-xs">
-            <span class="font-bold">${o.customer_name}</span>
-            <span class="text-orange-500 font-bold">${o.total_amount.toLocaleString()} Ks</span>
+        <li onclick="viewCustomerDetail('${o.customer_phone}')" class="flex justify-between items-center bg-white p-3 rounded-2xl border mb-2 shadow-sm cursor-pointer">
+            <span class="font-bold text-xs">${o.customer_name}</span>
+            <span class="text-orange-500 font-black text-xs">${o.total_amount.toLocaleString()} Ks</span>
         </li>`).join('');
-
-    checkStockAlerts();
 }
 
-async function checkStockAlerts() {
-    const { data: items } = await _supabase.from('menus').select('name, stock').lt('stock', 5);
-    if(items && items.length > 0) {
-        items.forEach(m => addNotification(`${m.name} က လက်ကျန် ${m.stock} ခုပဲ ကျန်ပါတော့တယ်`, 'stock'));
-    }
-}
-
-// --- INIT LOAD ---
+// INIT
 window.onload = () => {
-    const savedPage = localStorage.getItem('lastPage') || 'dashboard';
-    switchPage(savedPage);
+    const lastPage = localStorage.getItem('lastPage') || 'dashboard';
+    switchPage(lastPage);
 };
 
