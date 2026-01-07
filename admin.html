@@ -104,9 +104,9 @@
 
       <section id="page-orders" class="page">
         <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar py-2">
-          <button onclick="setOrderStatusTab('new')" class="tab-btn active px-6 py-2 rounded-xl text-xs font-bold" data-status="new">New</button>
-          <button onclick="setOrderStatusTab('pending')" class="tab-btn px-6 py-2 rounded-xl text-xs font-bold" data-status="pending">Pending</button>
-          <button onclick="setOrderStatusTab('finished')" class="tab-btn px-6 py-2 rounded-xl text-xs font-bold" data-status="finished">Finished</button>
+          <button onclick="setOrderStatusTab('new', this)" class="tab-btn active">New</button>
+<button onclick="setOrderStatusTab('pending', this)" class="tab-btn">Pending</button>
+<button onclick="setOrderStatusTab('finished', this)" class="tab-btn">Finished</button>
         </div>
         <div id="order-cards" class="space-y-4 pb-20"></div>
       </section>
@@ -142,19 +142,7 @@
       setTimeout(() => ov.classList.toggle('opacity-0'), 10);
     }
     function toggleNotif() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
-    function switchPage(pageId) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
-      document.getElementById('page-' + pageId).classList.add('visible');
-      document.getElementById('page-title').innerText = pageId.replace('-',' ').replace(/\bw/g, l => l.toUpperCase());
-      if(!document.getElementById('sidebar').classList.contains('closed')) toggleSidebar();
-      if(pageId === 'dashboard') calcDashboard();
-      if(pageId === 'menu') renderMenuList();
-      if(pageId === 'customers') renderCustomerList();
-      if(pageId === 'add-menu' && !document.getElementById('menu-id').value) {
-          document.getElementById('form-title').innerText = "Add New Menu";
-          resetMenuForm();
-      }
-    }
+    
   </script>
 </body>
 </html>
