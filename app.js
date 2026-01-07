@@ -128,18 +128,47 @@ async function calcDashboard() {
 
 
 // --- ORDERS & DEEP LINK ---
+// --- ORDER TAB SYSTEM ---
+async function setOrderStatusTab(status) {
+    // ၁။ Tab ခလုတ်များ၏ အရောင်ကို ပြောင်းလဲခြင်း
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+        if (tab.getAttribute('data-status') === status) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+
+    // ၂။ သက်ဆိုင်ရာ အော်ဒါကတ်များကို ဆွဲထုတ်ပြသခြင်း
+    await renderOrderCards(status);
+}
+
+// အော်ဒါကတ်များ ဆွဲထုတ်သည့် Function (နာမည်ကို သေချာအောင် ပြန်စစ်ပါ)
 async function renderOrderCards(status) {
     const container = document.getElementById("order-cards");
-    container.innerHTML = "<p class='text-center py-10 text-slate-400'>Loading...</p>";
+    container.innerHTML = `<div class="text-center py-10">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+        <p class="text-xs text-slate-400 mt-2">Loading orders...</p>
+    </div>`;
 
-    const { data: orders } = await _supabase
+    const { data: orders, error } = await _supabase
         .from('orders')
         .select('*, order_items(*, menus(*))')
         .eq('status', status)
         .order('created_at', { ascending: false });
 
+    if (error) {
+        container.innerHTML = `<p class="text-center text-red-500 py-10">Error loading orders</p>`;
+        return;
+    }
+
     if (!orders || orders.length === 0) {
-        container.innerHTML = "<p class='text-center py-10 text-slate-300 italic'>အော်ဒါမရှိသေးပါ</p>";
+        container.innerHTML = `<div class="text-center py-20 text-slate-300 italic">
+            <i data-lucide="package-open" class="mx-auto w-12 h-12 mb-2"></i>
+            <p>အော်ဒါမရှိသေးပါ</p>
+        </div>`;
+        lucide.createIcons();
         return;
     }
 
@@ -152,22 +181,31 @@ async function renderOrderCards(status) {
                 </div>
                 <div class="text-right font-black text-orange-500">${o.total_amount} Ks</div>
             </div>
-            <div class="bg-slate-50 p-3 rounded-2xl text-[11px] text-slate-500">
+            <div class="bg-slate-50 p-3 rounded-2xl text-[11px] text-slate-600 border border-slate-100">
                 ${o.order_items.map(i => `• ${i.menus?.name} (x${i.quantity})`).join('<br>')}
             </div>
             <div class="flex gap-2">
-                ${status === 'new' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition">Accept Order</button>` : ''}
-                ${status === 'pending' ? `<button onclick="updateStatus('${o.id}', 'finished')" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition">Finish Order</button>` : ''}
+                ${status === 'new' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition shadow-lg shadow-orange-100">Accept Order</button>` : ''}
+                ${status === 'pending' ? `<button onclick="updateStatus('${o.id}', 'finished')" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-xs active:scale-95 transition shadow-lg shadow-green-100">Finish Order</button>` : ''}
+                ${status === 'finished' ? `<div class="w-full text-center py-2 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-bold uppercase">Completed Order</div>` : ''}
             </div>
         </div>
     `).join('');
+    
+    lucide.createIcons();
 }
 
-async function updateStatus(id, next) {
-    await _supabase.from('orders').update({ status: next }).eq('id', id);
-    renderOrderCards(next === 'pending' ? 'new' : 'pending');
-    calcDashboard();
+// Status ပြောင်းလဲသည့် Function
+async function updateStatus(id, nextStatus) {
+    const { error } = await _supabase.from('orders').update({ status: nextStatus }).eq('id', id);
+    if (!error) {
+        // အောင်မြင်ရင် လက်ရှိ Tab ကို Refresh လုပ်မယ်
+        const currentTab = document.querySelector('.tab-btn.active').getAttribute('data-status');
+        renderOrderCards(currentTab);
+        calcDashboard(); // Dashboard က အရေအတွက်တွေကိုပါ update လုပ်မယ်
+    }
 }
+
 
 // --- MENU & STOCK ---
 async function renderMenuList() {
