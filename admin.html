@@ -2,161 +2,182 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Restaurant Admin Panel</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-<div class="layout">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amara Admin - Smart Restaurant System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Sidebar Menu -->
-  <aside class="sidebar">
-    <h2 class="logo">Amara Admin</h2>
-    <nav>
-      <ul>
-        <li class="active" data-page="dashboard">Dashboard</li>
-        <li data-page="orders">Orders</li>
-        <li data-page="menu">Menu</li>
-        <li data-page="customers">Customers</li>
-      </ul>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .page { display: none; }
+    .page.visible { display: block; animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .sidebar-item.active { background: #f97316; color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div class="flex min-h-screen">
+
+  <aside class="w-64 bg-white border-r border-slate-200 flex flex-col sticky top-0 h-screen">
+    <div class="p-6">
+      <h2 class="text-2xl font-800 text-orange-500 italic tracking-tighter">AMARA <span class="text-slate-400 font-medium text-xs not-italic">ADMIN</span></h2>
+    </div>
+    
+    <nav class="flex-1 px-4 space-y-2">
+      <button data-page="dashboard" class="sidebar-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+      </button>
+      <button data-page="orders" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-500 hover:bg-slate-50 transition-all">
+        <i data-lucide="shopping-cart" class="w-5 h-5"></i> Orders
+      </button>
+      <button data-page="menu" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-500 hover:bg-slate-50 transition-all">
+        <i data-lucide="utensils-crossbones" class="w-5 h-5"></i> Menu
+      </button>
+      <button data-page="customers" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-slate-500 hover:bg-slate-50 transition-all">
+        <i data-lucide="users" class="w-5 h-5"></i> Customers
+      </button>
     </nav>
+
+    <div class="p-4 border-t border-slate-100">
+      <div class="bg-orange-50 rounded-2xl p-4">
+        <p class="text-xs font-bold text-orange-600 uppercase mb-1">Database Status</p>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-sm font-bold text-slate-700">Supabase Live</span>
+        </div>
+      </div>
+    </div>
   </aside>
 
-  <!-- Main Content -->
-  <main class="main">
-
-    <!-- Top Bar -->
-    <header class="topbar">
-      <h1 id="page-title">Dashboard</h1>
-      <div class="topbar-right">
-        <!-- Notification bell -->
-        <div class="notif-wrapper">
-          <span id="notif-dot" class="notif-dot hidden"></span>
-          <button id="notif-btn" class="icon-btn">
-            🔔
+  <main class="flex-1">
+    
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-8 py-4 flex justify-between items-center">
+      <h1 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h1>
+      
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <button id="notif-btn" class="p-2 hover:bg-slate-100 rounded-full relative transition-all">
+            <i data-lucide="bell" class="w-6 h-6 text-slate-600"></i>
+            <span id="notif-dot" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full hidden"></span>
           </button>
-          <div id="notif-dropdown" class="notif-dropdown hidden">
-            <!-- notification items will append here -->
+          <div id="notif-dropdown" class="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl hidden overflow-hidden">
+            <div class="p-4 border-b border-slate-100 font-bold text-sm">Notifications</div>
+            <div id="notif-items" class="max-h-60 overflow-y-auto p-2 text-sm text-slate-500 text-center py-8">
+              No new alerts
+            </div>
           </div>
         </div>
+        <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center font-bold text-orange-600">A</div>
       </div>
     </header>
 
-    <!-- DASHBOARD PAGE -->
-    <section id="page-dashboard" class="page visible">
-      <div class="cards-row">
-        <div class="card">
-          <h3>Total Orders</h3>
-          <p id="total-orders">0</p>
-        </div>
-        <div class="card">
-          <h3>Total Revenue</h3>
-          <p id="total-revenue">$0</p>
-        </div>
-        <div class="card">
-          <h3>Total Customers</h3>
-          <p id="total-customers">0</p>
-        </div>
-        <div class="card">
-          <h3>Total Menu</h3>
-          <p id="total-menu">0</p>
-        </div>
-      </div>
+    <div class="p-8">
 
-      <div class="two-cols">
-        <div class="card">
-          <h3>New Orders</h3>
-          <ul id="dash-new-orders"></ul>
-        </div>
-        <div class="card">
-          <h3>Live Pending Orders</h3>
-          <ul id="dash-pending-orders"></ul>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Recent Orders</h3>
-        <ul id="dash-recent-orders"></ul>
-      </div>
-    </section>
-
-    <!-- ORDERS PAGE -->
-    <section id="page-orders" class="page">
-      <div class="tabs">
-        <button class="tab-btn active" data-status="new">New</button>
-        <button class="tab-btn" data-status="pending">Pending</button>
-        <button class="tab-btn" data-status="finished">Finished</button>
-      </div>
-
-      <div id="order-cards" class="cards-grid">
-        <!-- Order cards append here -->
-      </div>
-    </section>
-
-    <!-- MENU PAGE -->
-    <section id="page-menu" class="page">
-      <div class="card">
-        <h3>Add / Edit Menu</h3>
-        <form id="menu-form">
-          <input type="hidden" id="menu-id" />
-          <div class="form-row">
-            <label>Image</label>
-            <input type="file" id="menu-image" accept="image/*" />
+      <section id="page-dashboard" class="page visible space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Orders</p>
+            <h3 id="total-orders" class="text-4xl font-800">0</h3>
           </div>
-          <div class="form-row">
-            <label>Name</label>
-            <input type="text" id="menu-name" required />
+          <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Revenue</p>
+            <h3 id="total-revenue" class="text-4xl font-800 text-orange-500">0 Ks</h3>
           </div>
-          <div class="form-row">
-            <label>Price</label>
-            <input type="number" id="menu-price" required />
+          <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Customers</p>
+            <h3 id="total-customers" class="text-4xl font-800">0</h3>
           </div>
-          <div class="form-row">
-            <label>Stock</label>
-            <input type="number" id="menu-stock" required />
-          </div>
-          <button type="submit">Save Menu</button>
-        </form>
-      </div>
-
-      <h3>Menu Items</h3>
-      <div id="menu-list" class="menu-grid">
-        <!-- menu items here -->
-      </div>
-    </section>
-
-    <!-- CUSTOMERS PAGE -->
-    <section id="page-customers" class="page">
-      <div class="two-cols">
-        <div class="card">
-          <h3>Customer List</h3>
-          <ul id="customer-list"></ul>
-        </div>
-        <div class="card">
-          <h3>Customer Profile</h3>
-          <div id="customer-profile">
-            <p>Select customer</p>
+          <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Menu Items</p>
+            <h3 id="total-menu" class="text-4xl font-800">0</h3>
           </div>
         </div>
-      </div>
 
-      <div class="two-cols">
-        <div class="card">
-          <h3>Order History</h3>
-          <ul id="customer-orders"></ul>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="font-800 text-lg flex items-center gap-2"><i data-lucide="zap" class="text-yellow-500"></i> Live New Orders</h3>
+              <span class="text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-full font-bold">Real-time</span>
+            </div>
+            <ul id="dash-new-orders" class="space-y-4"></ul>
+          </div>
+          <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <h3 class="font-800 text-lg mb-6">Live Pending</h3>
+            <ul id="dash-pending-orders" class="space-y-4"></ul>
+          </div>
         </div>
-        <div class="card">
-          <h3>Voucher Details</h3>
-          <ul id="customer-vouchers"></ul>
-        </div>
-      </div>
-    </section>
+      </section>
 
+      <section id="page-orders" class="page">
+        <div class="flex gap-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl w-fit">
+          <button class="tab-btn active px-6 py-2.5 rounded-xl font-bold text-sm transition-all bg-white shadow-sm" data-status="new">New</button>
+          <button class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500 transition-all" data-status="pending">Pending</button>
+          <button class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500 transition-all" data-status="finished">Finished</button>
+        </div>
+        <div id="order-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </section>
+
+      <section id="page-menu" class="page grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+          <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 sticky top-24">
+            <h3 class="font-800 text-xl mb-6">Menu စီမံမည်</h3>
+            <form id="menu-form" class="space-y-4">
+              <input type="hidden" id="menu-id" />
+              <div>
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Item Name</label>
+                <input type="text" id="menu-name" class="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-orange-500" required />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Price (Ks)</label>
+                  <input type="number" id="menu-price" class="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-orange-500" required />
+                </div>
+                <div>
+                  <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Stock</label>
+                  <input type="number" id="menu-stock" class="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-orange-500" required />
+                </div>
+              </div>
+              <div>
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Image URL (Optional)</label>
+                <input type="text" id="menu-image-url" class="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-orange-500" />
+              </div>
+              <button type="submit" class="w-full bg-orange-500 text-white font-black py-4 rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">Save Item</button>
+            </form>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+      </section>
+
+      <section id="page-customers" class="page space-y-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 h-fit">
+            <h3 class="font-800 text-lg mb-6">Customer List</h3>
+            <ul id="customer-list" class="space-y-2"></ul>
+          </div>
+          <div class="lg:col-span-2 space-y-8">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+              <h3 class="font-800 text-lg mb-4">Customer Details</h3>
+              <div id="customer-profile" class="text-slate-400 italic">Select a customer to view history</div>
+            </div>
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+              <h3 class="font-800 text-lg mb-4 text-orange-500">Order History</h3>
+              <ul id="customer-orders" class="space-y-3"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
   </main>
 </div>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
-<script src="app.js"></script>
-  
+
+<script>lucide.createIcons();</script>
 <script src="app.js"></script>
 </body>
 </html>
+
