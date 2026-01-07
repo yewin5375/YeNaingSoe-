@@ -1,3 +1,4 @@
+
 const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -172,7 +173,7 @@ async function renderCustomerList() {
         .select('customer_name, customer_phone')
         .order('created_at', { ascending: false })
         .limit(50);
-if (error || !customers) return;
+
     const customerMap = {};
     customers.forEach(c => {
         if (!customerMap[c.customer_phone]) {
@@ -468,10 +469,8 @@ async function calcDashboard() {
 // --- INIT ---
 window.onload = () => {
     lucide.createIcons();
-
     const lastPage = localStorage.getItem('lastPage') || 'dashboard';
     switchPage(lastPage);
-};
     
     // Real-time subscriptions
     _supabase
@@ -479,7 +478,7 @@ window.onload = () => {
         .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'orders' }, 
             (payload) => {
-                if (payload.new?.id) {
+                console.log('Order change:', payload);
                 addNotification(`Order ${payload.eventType} #${payload.new.id.slice(-8)}`);
                 if (['dashboard', 'orders'].includes(localStorage.getItem('lastPage'))) {
                     switchPage(localStorage.getItem('lastPage'));
