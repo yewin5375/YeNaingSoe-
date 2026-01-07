@@ -104,9 +104,9 @@
 
       <section id="page-orders" class="page">
         <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar py-2">
-          <button onclick="setOrderStatusTab('new', this)" class="tab-btn active">New</button>
-<button onclick="setOrderStatusTab('pending', this)" class="tab-btn">Pending</button>
-<button onclick="setOrderStatusTab('finished', this)" class="tab-btn">Finished</button>
+          <button onclick="setOrderStatusTab('new')" class="tab-btn active px-6 py-2 rounded-xl text-xs font-bold" data-status="new">New</button>
+          <button onclick="setOrderStatusTab('pending')" class="tab-btn px-6 py-2 rounded-xl text-xs font-bold" data-status="pending">Pending</button>
+          <button onclick="setOrderStatusTab('finished')" class="tab-btn px-6 py-2 rounded-xl text-xs font-bold" data-status="finished">Finished</button>
         </div>
         <div id="order-cards" class="space-y-4 pb-20"></div>
       </section>
