@@ -172,7 +172,7 @@ async function renderCustomerList() {
         .select('customer_name, customer_phone')
         .order('created_at', { ascending: false })
         .limit(50);
-
+if (error || !customers) return;
     const customerMap = {};
     customers.forEach(c => {
         if (!customerMap[c.customer_phone]) {
@@ -468,8 +468,10 @@ async function calcDashboard() {
 // --- INIT ---
 window.onload = () => {
     lucide.createIcons();
+
     const lastPage = localStorage.getItem('lastPage') || 'dashboard';
     switchPage(lastPage);
+};
     
     // Real-time subscriptions
     _supabase
@@ -477,7 +479,7 @@ window.onload = () => {
         .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'orders' }, 
             (payload) => {
-                console.log('Order change:', payload);
+                if (payload.new?.id) {
                 addNotification(`Order ${payload.eventType} #${payload.new.id.slice(-8)}`);
                 if (['dashboard', 'orders'].includes(localStorage.getItem('lastPage'))) {
                     switchPage(localStorage.getItem('lastPage'));
