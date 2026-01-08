@@ -122,27 +122,18 @@ function setOrderStatusTab(status) {
 }
 
 async function renderOrders(status) {
+    console.log("Fetching orders for:", status); // စစ်ဆေးရန်
     currentOrderTab = status;
     const container = document.getElementById('order-cards');
-    
-    // loading ပြရန်
     container.innerHTML = `<center class="py-20 text-slate-400 text-sm animate-pulse">Data ဆွဲနေသည်...</center>`;
 
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select(`
-            *,
-            order_items (
-                quantity,
-                price_at_time,
-                menus (name)
-            )
-        `)
-        .eq('status', status) // 'new', 'pending', 'finished' တန်ဖိုးများနှင့် စစ်ဆေးသည်
+        .select(`*, order_items (quantity, price_at_time, menus (name))`)
+        .eq('status', status)
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Query Error:", error.message);
         container.innerHTML = `<center class="py-20 text-red-400 text-sm">Error: ${error.message}</center>`;
         return;
     }
