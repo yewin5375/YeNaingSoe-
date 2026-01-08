@@ -197,52 +197,64 @@
         };
 
         // --- Submit Order ---
-        document.getElementById('order-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (cart.length === 0) return alert("ခြင်းတောင်းထဲမှာ ပစ္စည်းအရင်ထည့်ပါ!");
+        // --- Submit Order ---
+document.getElementById('order-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (cart.length === 0) return alert("ခြင်းတောင်းထဲမှာ ပစ္စည်းအရင်ထည့်ပါ!");
 
-            const btn = document.getElementById('submit-btn');
-            btn.innerText = "Sending...";
-            btn.disabled = true;
+    const btn = document.getElementById('submit-btn');
+    btn.innerText = "Sending...";
+    btn.disabled = true;
 
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            
-            const { data: order, error: orderErr } = await _supabase
-                .from('orders')
-                .insert([{
-                    customer_name: document.getElementById('cust-name').value,
-                    customer_phone: document.getElementById('cust-phone').value,
-                    pickup_date: document.getElementById('pickup-date').value,
-                    pickup_time: document.getElementById('pickup-time').value,
-                    note: document.getElementById('note').value,
-                    total_amount: total
-                }])
-                .select().single();
+    const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    
+    // ၁။ Orders Table ထဲ ထည့်မယ် (status: 'new' ထည့်ထားသည်)
+    const { data: order, error: orderErr } = await _supabase
+        .from('orders')
+        .insert([{
+            customer_name: document.getElementById('cust-name').value,
+            customer_phone: document.getElementById('cust-phone').value,
+            pickup_date: document.getElementById('pickup-date').value,
+            pickup_time: document.getElementById('pickup-time').value,
+            note: document.getElementById('note').value,
+            total_amount: total,
+            status: 'new' // ဤနေရာသည် အလွန်အရေးကြီးသည်
+        }])
+        .select().single();
 
-            if (orderErr) {
-                alert("Order error: " + orderErr.message);
-                btn.innerText = "Confirm Order";
-                btn.disabled = false;
-                return;
-            }
+    if (orderErr) {
+        alert("Order error: " + orderErr.message);
+        btn.innerText = "Confirm Order";
+        btn.disabled = false;
+        return;
+    }
 
-            const itemsToInsert = cart.map(item => ({
-                order_id: order.id,
-                menu_id: item.id,
-                quantity: item.qty,
-                unit_price: item.price
-            }));
+    // ၂။ Order Items ထဲ ထည့်မယ် (price_at_time ထည့်ထားသည်)
+    const itemsToInsert = cart.map(item => ({
+        order_id: order.id,
+        menu_id: item.id,
+        quantity: item.qty,
+        price_at_time: item.price, // Admin Side နှင့် ကိုက်ညီအောင် ပြင်လိုက်သည်
+        unit_price: item.price      // Customer Side Compatibility အတွက် ဆက်ထားသည်
+    }));
 
-            await _supabase.from('order_items').insert(itemsToInsert);
+    const { error: itemsErr } = await _supabase.from('order_items').insert(itemsToInsert);
 
-            alert("Order တင်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးတင်ပါတယ်။");
-            cart = [];
-            updateCartUI();
-            toggleCart();
-            document.getElementById('order-form').reset();
-            btn.innerText = "Confirm Order";
-            btn.disabled = false;
-        });
+    if (itemsErr) {
+        console.error("Items Insert Error:", itemsErr);
+    }
+
+    alert("Order တင်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးတင်ပါတယ်။");
+    
+    // UI Reset
+    cart = [];
+    updateCartUI();
+    toggleCart();
+    document.getElementById('order-form').reset();
+    btn.innerText = "Confirm Order";
+    btn.disabled = false;
+});
+        
 
         fetchMenu();
     </script>
