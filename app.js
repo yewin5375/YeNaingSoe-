@@ -122,56 +122,59 @@ function setOrderStatusTab(status) {
 }
 
 async function renderOrders(status) {
+    currentOrderTab = status;
+    // အရေးကြီးသည်- select ထဲတွင် Relationship များကို သေချာထည့်ပါ
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select('*, order_items(*, menus(*))')
+        .select(`
+            *,
+            order_items (
+                quantity,
+                price_at_time,
+                menus (name)
+            )
+        `)
         .eq('status', status)
         .order('created_at', { ascending: false });
 
     const container = document.getElementById('order-cards');
-    if (error || !orders.length) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-400">အော်ဒါမရှိသေးပါ (${status})</div>`;
+    if (error || !orders || orders.length === 0) {
+        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">အော်ဒါမရှိသေးပါ</center>`;
         return;
     }
 
     container.innerHTML = orders.map(o => `
-        <div class="bg-white p-5 rounded-3xl border shadow-sm">
+        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4">
             <div class="flex justify-between items-start mb-4">
-                <div onclick="viewCustomerDetail('${o.customer_phone}')" class="cursor-pointer">
-                    <h4 class="font-bold text-slate-800 flex items-center gap-1">${o.customer_name} <i data-lucide="external-link" class="w-3 h-3 text-blue-400"></i></h4>
-                    <p class="text-xs text-slate-500">${new Date(o.created_at).toLocaleString()}</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-600 uppercase">${status}</span>
+                <div>
+                    <h4 class="font-bold text-slate-800">${o.customer_name}</h4>
+                    <p class="text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString()}</p>
                 </div>
             </div>
-            
+
             <div class="space-y-2 border-y border-dashed py-3 my-3">
                 ${o.order_items.map(i => `
                     <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">${i.menus?.name} <span class="text-xs text-slate-400">x${i.quantity}</span></span>
+                        <span class="text-slate-600">${i.menus ? i.menus.name : 'Unknown Item'} <small class="text-orange-500">x${i.quantity}</small></span>
                         <span class="font-bold">${(i.price_at_time * i.quantity).toLocaleString()} Ks</span>
                     </div>
                 `).join('')}
             </div>
 
             <div class="flex justify-between items-center mb-4">
-                <span class="text-sm font-bold text-slate-400">Total Amount</span>
-                <span class="text-lg font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Total Amount</span>
+                <span class="text-xl font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</span>
             </div>
 
             <div class="flex gap-2">
-                ${status === 'new' ? `
-                    <button onclick="updateOrderStatus('${o.id}', 'pending')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-blue-100">Accept</button>
-                ` : status === 'pending' ? `
-                    <button onclick="updateOrderStatus('${o.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-green-100">Complete</button>
-                ` : ''}
-                <button onclick="downloadVoucher('${o.id}')" class="p-3 bg-slate-100 text-slate-600 rounded-2xl"><i data-lucide="printer"></i></button>
+                ${status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-2xl">Accept</button>` : ''}
+                <button onclick="downloadVoucher('${o.id}')" class="p-3 bg-slate-100 rounded-2xl"><i data-lucide="printer"></i></button>
             </div>
         </div>
     `).join('');
     lucide.createIcons();
 }
+
 
 async function updateOrderStatus(id, newStatus) {
     const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
@@ -269,35 +272,58 @@ async function viewCustomerDetail(phone) {
 
 // --- ၆။ VOUCHER PRINT ---
 async function downloadVoucher(id) {
-    const { data: o } = await _supabase.from('orders').select('*, order_items(*, menus(*))').eq('id', id).single();
+    const { data: o } = await _supabase
+        .from('orders')
+        .select('*, order_items(*, menus(*))')
+        .eq('id', id)
+        .single();
+    
     if (!o) return;
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
-
-    doc.setFontSize(14);
-    doc.text("မြင်သာကြက်ကင်", 40, 10, { align: "center" });
-    doc.setFontSize(8);
-    doc.text(`ID: #${o.id.slice(0, 8)}`, 10, 20);
-    doc.text(`Date: ${new Date(o.created_at).toLocaleString()}`, 10, 24);
-    doc.text(`Customer: ${o.customer_name} (${o.customer_phone})`, 10, 28);
-    doc.text("------------------------------------------", 10, 32);
-
-    let y = 38;
-    o.order_items.forEach(i => {
-        doc.text(`${i.menus?.name || 'Item'}`, 10, y);
-        doc.text(`x${i.quantity}`, 45, y);
-        doc.text(`${(i.price_at_time * i.quantity).toLocaleString()} Ks`, 70, y, { align: "right" });
-        y += 6;
-    });
-
-    doc.text("------------------------------------------", 10, y);
-    doc.setFontSize(10);
-    doc.text(`Total: ${o.total_amount.toLocaleString()} Ks`, 70, y + 8, { align: "right" });
-    doc.setFontSize(8);
-    doc.text("Thank You!", 40, y + 16, { align: "center" });
+    // Voucher ပုံစံ HTML တစ်ခု ယာယီဖန်တီးမယ်
+    const vContainer = document.createElement('div');
+    vContainer.id = "temp-voucher";
+    vContainer.style = "width: 350px; padding: 20px; background: white; color: black; font-family: 'Pyidaungsu', sans-serif; position: fixed; top: 0; left: -1000px;";
     
-    window.open(doc.output('bloburl'), '_blank');
+    vContainer.innerHTML = `
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">
+            <h2 style="margin: 0;">မြင်သာကြက်ကင်</h2>
+            <p style="font-size: 12px; margin: 5px 0;">အော်ဒါအမှတ်: #${o.id.slice(0,8)}</p>
+        </div>
+        <div style="margin: 15px 0; font-size: 14px;">
+            <p><b>ဝယ်သူ:</b> ${o.customer_name}</p>
+            <p><b>ဖုန်း:</b> ${o.customer_phone}</p>
+            <p><b>နေ့စွဲ:</b> ${new Date(o.created_at).toLocaleString()}</p>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr style="border-bottom: 1px solid #ddd;">
+                <th align="left">ဟင်းပွဲ</th>
+                <th align="right">စျေးနှုန်း</th>
+            </tr>
+            ${o.order_items.map(i => `
+                <tr>
+                    <td style="padding: 5px 0;">${i.menus.name} x ${i.quantity}</td>
+                    <td align="right">${(i.price_at_time * i.quantity).toLocaleString()} Ks</td>
+                </tr>
+            `).join('')}
+        </table>
+        <div style="text-align: right; border-top: 2px solid #000; margin-top: 10px; padding-top: 10px;">
+            <h3 style="margin: 0;">စုစုပေါင်း: ${o.total_amount.toLocaleString()} Ks</h3>
+        </div>
+        <p style="text-align: center; font-size: 12px; margin-top: 20px;">ကျေးဇူးတင်ပါသည်</p>
+    `;
+    
+    document.body.appendChild(vContainer);
+
+    // HTML ကို ပုံအဖြစ် ပြောင်းပြီး Print ထုတ်မယ်
+    html2canvas(vContainer).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<img src="${imgData}" style="width:100%;">`);
+        printWindow.document.close();
+        printWindow.print();
+        document.body.removeChild(vContainer);
+    });
 }
 
 // --- ၇။ DASHBOARD & REAL-TIME ---
