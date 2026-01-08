@@ -123,7 +123,11 @@ function setOrderStatusTab(status) {
 
 async function renderOrders(status) {
     currentOrderTab = status;
-    // အရေးကြီးသည်- select ထဲတွင် Relationship များကို သေချာထည့်ပါ
+    const container = document.getElementById('order-cards');
+    
+    // loading ပြရန်
+    container.innerHTML = `<center class="py-20 text-slate-400 text-sm animate-pulse">Data ဆွဲနေသည်...</center>`;
+
     const { data: orders, error } = await _supabase
         .from('orders')
         .select(`
@@ -134,12 +138,17 @@ async function renderOrders(status) {
                 menus (name)
             )
         `)
-        .eq('status', status)
+        .eq('status', status) // 'new', 'pending', 'finished' တန်ဖိုးများနှင့် စစ်ဆေးသည်
         .order('created_at', { ascending: false });
 
-    const container = document.getElementById('order-cards');
-    if (error || !orders || orders.length === 0) {
-        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">အော်ဒါမရှိသေးပါ</center>`;
+    if (error) {
+        console.error("Query Error:", error.message);
+        container.innerHTML = `<center class="py-20 text-red-400 text-sm">Error: ${error.message}</center>`;
+        return;
+    }
+
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါ မရှိသေးပါ</center>`;
         return;
     }
 
@@ -150,6 +159,7 @@ async function renderOrders(status) {
                     <h4 class="font-bold text-slate-800">${o.customer_name}</h4>
                     <p class="text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString()}</p>
                 </div>
+                <span class="text-[10px] bg-slate-100 px-2 py-1 rounded-lg font-bold">${o.status.toUpperCase()}</span>
             </div>
 
             <div class="space-y-2 border-y border-dashed py-3 my-3">
@@ -167,8 +177,9 @@ async function renderOrders(status) {
             </div>
 
             <div class="flex gap-2">
-                ${status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-2xl">Accept</button>` : ''}
-                <button onclick="downloadVoucher('${o.id}')" class="p-3 bg-slate-100 rounded-2xl"><i data-lucide="printer"></i></button>
+                ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-blue-100">Accept Order</button>` : ''}
+                ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-green-100">Complete</button>` : ''}
+                <button onclick="downloadVoucher('${o.id}')" class="p-3 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"><i data-lucide="printer"></i></button>
             </div>
         </div>
     `).join('');
