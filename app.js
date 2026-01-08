@@ -122,58 +122,73 @@ function setOrderStatusTab(status) {
 }
 
 async function renderOrders(status) {
-    console.log("Fetching orders for:", status); // စစ်ဆေးရန်
     currentOrderTab = status;
     const container = document.getElementById('order-cards');
-    container.innerHTML = `<center class="py-20 text-slate-400 text-sm animate-pulse">Data ဆွဲနေသည်...</center>`;
+    container.innerHTML = `<center class="py-10 text-slate-400 text-xs animate-pulse">ခေတ္တစောင့်ပါ...</center>`;
 
+    // Query ကို ပိုပြီး စိတ်ချရအောင် ပြင်ဆင်ထားသည်
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select(`*, order_items (quantity, price_at_time, menus (name))`)
-        .eq('status', status)
+        .select(`
+            *,
+            order_items (
+                quantity,
+                price_at_time,
+                menus ( name )
+            )
+        `)
+        .eq('status', status.toLowerCase()) // status ကို စာလုံးအသေးဖြင့် ရှာမည်
         .order('created_at', { ascending: false });
 
     if (error) {
-        container.innerHTML = `<center class="py-20 text-red-400 text-sm">Error: ${error.message}</center>`;
+        console.error("Supabase Error:", error);
+        container.innerHTML = `<center class="py-10 text-red-400 text-xs">Error: ${error.message}</center>`;
         return;
     }
 
     if (!orders || orders.length === 0) {
-        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါ မရှိသေးပါ</center>`;
+        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါမရှိသေးပါ</center>`;
         return;
     }
 
-    container.innerHTML = orders.map(o => `
-        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4">
-            <div class="flex justify-between items-start mb-4">
+    // မှာယူထားသော ဟင်းပွဲများ ပြသရန် Loop ပတ်ခြင်း
+    container.innerHTML = orders.map(o => {
+        const itemsHtml = o.order_items.map(i => `
+            <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600">${i.menus ? i.menus.name : 'ပစ္စည်းအမည်မသိရ'} x ${i.quantity}</span>
+                <span class="font-bold">${((i.price_at_time || 0) * i.quantity).toLocaleString()} Ks</span>
+            </div>
+        `).join('');
+
+        return `
+        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4 border-slate-100">
+            <div class="flex justify-between items-start mb-3">
                 <div>
-                    <h4 class="font-bold text-slate-800">${o.customer_name}</h4>
-                    <p class="text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString()}</p>
+                    <h4 class="font-black text-slate-800 text-sm">${o.customer_name}</h4>
+                    <p class="text-[9px] text-slate-400">${new Date(o.created_at).toLocaleString('my-MM')}</p>
                 </div>
-                <span class="text-[10px] bg-slate-100 px-2 py-1 rounded-lg font-bold">${o.status.toUpperCase()}</span>
+                <button onclick="downloadVoucher('${o.id}')" class="p-2 bg-slate-50 rounded-xl text-slate-400 hover:text-orange-500">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="py-3 border-y border-dashed border-slate-100 mb-3">
+                ${itemsHtml}
             </div>
 
-            <div class="space-y-2 border-y border-dashed py-3 my-3">
-                ${o.order_items.map(i => `
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">${i.menus ? i.menus.name : 'Unknown Item'} <small class="text-orange-500">x${i.quantity}</small></span>
-                        <span class="font-bold">${(i.price_at_time * i.quantity).toLocaleString()} Ks</span>
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Total Amount</span>
+                <div class="text-right">
+                    <p class="text-lg font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</p>
+                    <div class="flex gap-2 mt-2">
+                        ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="px-4 py-2 bg-orange-500 text-white text-[11px] font-bold rounded-xl shadow-md">Accept</button>` : ''}
+                        ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'finished')" class="px-4 py-2 bg-green-500 text-white text-[11px] font-bold rounded-xl shadow-md">Done</button>` : ''}
                     </div>
-                `).join('')}
+                </div>
             </div>
-
-            <div class="flex justify-between items-center mb-4">
-                <span class="text-xs font-bold text-slate-400 uppercase">Total Amount</span>
-                <span class="text-xl font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</span>
-            </div>
-
-            <div class="flex gap-2">
-                ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-blue-100">Accept Order</button>` : ''}
-                ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-green-100">Complete</button>` : ''}
-                <button onclick="downloadVoucher('${o.id}')" class="p-3 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors"><i data-lucide="printer"></i></button>
-            </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
+    
     lucide.createIcons();
 }
 
