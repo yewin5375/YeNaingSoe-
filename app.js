@@ -121,76 +121,55 @@ function setOrderStatusTab(status) {
     renderOrders(status);
 }
 
+// အပေါ်က config တွေ အဟောင်းအတိုင်းထားပါ...
+
 async function renderOrders(status) {
     currentOrderTab = status;
     const container = document.getElementById('order-cards');
-    container.innerHTML = `<center class="py-10 text-slate-400 text-xs animate-pulse">ခေတ္တစောင့်ပါ...</center>`;
+    container.innerHTML = `<center class="py-20 text-slate-400 text-sm animate-pulse">Data ဆွဲနေသည်...</center>`;
 
-    // Query ကို ပိုပြီး စိတ်ချရအောင် ပြင်ဆင်ထားသည်
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select(`
-            *,
-            order_items (
-                quantity,
-                price_at_time,
-                menus ( name )
-            )
-        `)
-        .eq('status', status.toLowerCase()) // status ကို စာလုံးအသေးဖြင့် ရှာမည်
+        .select('*, order_items(*, menus(*))')
+        .eq('status', status)
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Supabase Error:", error);
-        container.innerHTML = `<center class="py-10 text-red-400 text-xs">Error: ${error.message}</center>`;
+        container.innerHTML = `<div class="p-10 text-red-500">${error.message}</div>`;
         return;
     }
 
     if (!orders || orders.length === 0) {
-        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါမရှိသေးပါ</center>`;
+        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါ မရှိသေးပါ</center>`;
         return;
     }
 
-    // မှာယူထားသော ဟင်းပွဲများ ပြသရန် Loop ပတ်ခြင်း
     container.innerHTML = orders.map(o => {
-        const itemsHtml = o.order_items.map(i => `
-            <div class="flex justify-between text-xs mb-1">
-                <span class="text-slate-600">${i.menus ? i.menus.name : 'ပစ္စည်းအမည်မသိရ'} x ${i.quantity}</span>
-                <span class="font-bold">${((i.price_at_time || 0) * i.quantity).toLocaleString()} Ks</span>
-            </div>
-        `).join('');
+        // Line 273 က syntax error ကို ဒီမှာ အသေအချာ ပြင်ထားပါတယ်
+        const itemsList = o.order_items ? o.order_items.map(function(i) {
+            var menuName = (i.menus && i.menus.name) ? i.menus.name : 'Unknown';
+            return `<div>${menuName} x ${i.quantity}</div>`;
+        }).join('') : '';
 
         return `
-        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4 border-slate-100">
-            <div class="flex justify-between items-start mb-3">
-                <div>
-                    <h4 class="font-black text-slate-800 text-sm">${o.customer_name}</h4>
-                    <p class="text-[9px] text-slate-400">${new Date(o.created_at).toLocaleString('my-MM')}</p>
-                </div>
-                <button onclick="downloadVoucher('${o.id}')" class="p-2 bg-slate-50 rounded-xl text-slate-400 hover:text-orange-500">
-                    <i data-lucide="printer" class="w-4 h-4"></i>
-                </button>
+        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4">
+            <h4 class="font-bold text-slate-800">${o.customer_name}</h4>
+            <div class="text-xs text-slate-500 my-2 border-y border-dashed py-2">
+                ${itemsList}
             </div>
-            
-            <div class="py-3 border-y border-dashed border-slate-100 mb-3">
-                ${itemsHtml}
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-[10px] font-bold text-slate-400 uppercase">Total Amount</span>
-                <div class="text-right">
-                    <p class="text-lg font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</p>
-                    <div class="flex gap-2 mt-2">
-                        ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="px-4 py-2 bg-orange-500 text-white text-[11px] font-bold rounded-xl shadow-md">Accept</button>` : ''}
-                        ${o.status === 'pending' ? `<button onclick="updateOrderStatus('${o.id}', 'finished')" class="px-4 py-2 bg-green-500 text-white text-[11px] font-bold rounded-xl shadow-md">Done</button>` : ''}
-                    </div>
+            <div class="flex justify-between items-center mt-3">
+                <span class="text-orange-600 font-black">${o.total_amount.toLocaleString()} Ks</span>
+                <div class="flex gap-2">
+                    ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="bg-blue-500 text-white px-4 py-2 rounded-xl text-xs">Accept</button>` : ''}
+                    <button onclick="downloadVoucher('${o.id}')" class="p-2 bg-slate-100 rounded-xl"><i data-lucide="printer"></i></button>
                 </div>
             </div>
         </div>`;
     }).join('');
     
-    lucide.createIcons();
+    if(window.lucide) lucide.createIcons();
 }
+
 
 
 async function updateOrderStatus(id, newStatus) {
