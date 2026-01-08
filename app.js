@@ -383,6 +383,17 @@ if (Notification.permission === 'default') Notification.requestPermission();
 // INIT
 window.onload = () => {
     const lastPage = localStorage.getItem('lastPage') || 'dashboard';
+    
+    // အခြေခံ အချက်အလက်များ အရင်တွက်မည်
+    calcDashboard();
+    
+    // လက်ရှိ Page ကို ဖွင့်မည်
     switchPage(lastPage);
+
+    // အကယ်၍ Order Page ရောက်နေရင် data ဆွဲထုတ်ရန် ခေါ်လိုက်ခြင်း
+    if (lastPage === 'orders') {
+        setOrderStatusTab(currentOrderTab); 
+    }
 };
+
         
