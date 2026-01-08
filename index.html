@@ -94,19 +94,28 @@
 
         // --- Fetch Menu ---
         async function fetchMenu() {
-    console.log("Fetching menu..."); // debug
-    const { data, error } = await _supabase.from('menus').select('*').eq('is_available', true);
+    console.log("Fetching menu...");
+    // Filter ကို ခေတ္တဖြုတ်ပြီး စမ်းသပ်ကြည့်ပါ (Data တက်မတက် သိရအောင်)
+    const { data, error } = await _supabase
+        .from('menus')
+        .select('*')
+        .order('name'); 
     
     if (error) {
-        console.error("Supabase Error:", error); // ဒီနေရာမှာ error ပြပါလိမ့်မယ်
-        document.getElementById('menu-container').innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+        console.error("Supabase Error:", error);
+        document.getElementById('menu-container').innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
         return;
     }
     
-    console.log("Data received:", data); // data ရမရ စစ်တာပါ
+    if (data.length === 0) {
+        document.getElementById('menu-container').innerHTML = `<p class="text-slate-400 text-center py-10">ဟင်းပွဲများ မရှိသေးပါ။ Admin Panel တွင် အရင်ထည့်ပါ။</p>`;
+        return;
+    }
+
     menuData = data;
     renderMenu();
-}
+        }
+        
 
 
         function renderMenu() {
