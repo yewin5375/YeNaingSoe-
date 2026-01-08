@@ -3,140 +3,224 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>မြင်သာကြက်ကင် - Admin</title>
+  <title>မြင်သာကြက်ကင် - Admin Panel</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   
   <style>
-    body { font-family: sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-    .page { display: none; }
-    .page.visible { display: block; }
-    .tab-btn.active { background: #f97316; color: white; }
-    #sidebar { transition: transform 0.3s ease; z-index: 1000; }
+    @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
+    
+    body { 
+      font-family: 'Pyidaungsu', sans-serif; 
+      -webkit-tap-highlight-color: transparent; 
+      overflow-x: hidden; 
+    }
+    .page { display: none; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }
+    .page.visible { display: block; opacity: 1; transform: translateY(0); }
+    
+    .tab-btn.active { 
+      background: #f97316; 
+      color: white; 
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+    
+    #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; }
     #sidebar.closed { transform: translateX(-100%); }
-    .overlay { transition: opacity 0.3s ease; }
+    
     .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Order Card Animation */
+    .order-card { animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
-<body class="bg-slate-100">
+<body class="bg-slate-50 text-slate-900">
 
-  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-[900] hidden opacity-0 transition-opacity"></div>
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-[900] hidden backdrop-blur-sm"></div>
 
-  <header class="bg-white border-b p-4 sticky top-0 z-[500] flex justify-between items-center shadow-sm">
+  <header class="bg-white/80 backdrop-blur-md border-b p-4 sticky top-0 z-[500] flex justify-between items-center shadow-sm">
     <div class="flex items-center gap-3">
-      <button onclick="toggleSidebar()" class="p-2 bg-slate-100 rounded-lg"><i data-lucide="menu"></i></button>
-      <h1 class="font-bold text-lg text-orange-600 uppercase" id="page-title">Dashboard</h1>
-    </div>
-    <div class="relative">
-      <button onclick="toggleNotif()" class="p-2 relative">
-        <i data-lucide="bell"></i>
-        <span id="notif-dot" class="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden animate-bounce"></span>
+      <button onclick="toggleSidebar()" class="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+        <i data-lucide="menu" class="w-6 h-6"></i>
       </button>
-      <div id="notif-dropdown" class="absolute right-0 mt-3 w-72 bg-white shadow-2xl rounded-2xl border hidden p-4 text-sm z-[600]">
-        <p class="font-bold border-b pb-2 mb-2">သတိပေးချက်များ</p>
-        <div id="notif-list" class="space-y-2 max-h-60 overflow-y-auto no-scrollbar"></div>
+      <h1 class="font-black text-lg text-orange-600 tracking-tight" id="page-title">DASHBOARD</h1>
+    </div>
+    
+    <div class="flex items-center gap-2">
+      <div class="relative">
+        <button onclick="toggleNotif()" class="p-2 bg-slate-100 rounded-xl relative">
+          <i data-lucide="bell" class="w-5 h-5 text-slate-600"></i>
+          <span id="notif-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden animate-ping"></span>
+        </button>
+        <div id="notif-dropdown" class="absolute right-0 mt-3 w-80 bg-white shadow-2xl rounded-2xl border hidden p-4 z-[600]">
+          <div class="flex justify-between items-center border-b pb-2 mb-2">
+            <span class="font-bold">Notifications</span>
+            <button onclick="toggleNotif()" class="text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <div id="notif-list" class="space-y-2 max-h-80 overflow-y-auto no-scrollbar text-xs">
+            <p class="text-center text-slate-400 py-4">သတိပေးချက်မရှိသေးပါ</p>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
   <div class="flex">
-    <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-white border-r closed shadow-2xl overflow-y-auto">
-      <div class="p-6 border-b flex justify-between items-center bg-orange-500 text-white">
-        <h2 class="font-black tracking-tighter">မြင်သာကြက်ကင်</h2>
-        <button onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    <aside id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white border-r closed shadow-2xl overflow-y-auto">
+      <div class="p-6 border-b flex justify-between items-center bg-orange-600 text-white">
+        <div>
+          <h2 class="font-black text-xl tracking-tighter">မြင်သာကြက်ကင်</h2>
+          <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">Admin Control</p>
+        </div>
+        <button onclick="toggleSidebar()" class="p-2 hover:bg-white/20 rounded-lg"><i data-lucide="chevron-left"></i></button>
       </div>
-      <nav class="p-4 space-y-2">
-        <button onclick="switchPage('dashboard')" class="w-full flex items-center gap-3 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all"><i data-lucide="layout-grid"></i> Dashboard</button>
-        <button onclick="switchPage('orders')" class="w-full flex items-center gap-3 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all"><i data-lucide="shopping-bag"></i> Orders</button>
-        <button onclick="switchPage('menu')" class="w-full flex items-center gap-3 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all"><i data-lucide="book-open"></i> Menu List</button>
-        <button onclick="switchPage('add-menu')" class="w-full flex items-center gap-3 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all text-orange-600"><i data-lucide="plus-circle"></i> Add New Menu</button>
-        <button onclick="switchPage('customers')" class="w-full flex items-center gap-3 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all"><i data-lucide="users"></i> Customers</button>
+      
+      <nav class="p-4 space-y-1">
+        <button onclick="switchPage('dashboard')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
+          <i data-lucide="layout-dashboard"></i> Dashboard
+        </button>
+        <button onclick="switchPage('orders')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
+          <i data-lucide="shopping-cart"></i> Orders
+        </button>
+        <button onclick="switchPage('menu')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
+          <i data-lucide="utensils-crossomer"></i> Menu Items
+        </button>
+        <button onclick="switchPage('add-menu')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-orange-600 bg-orange-50/50 hover:bg-orange-100 transition-all">
+          <i data-lucide="plus-circle"></i> Add New Menu
+        </button>
+        <div class="border-t my-4 opacity-50"></div>
+        <button onclick="switchPage('customers')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
+          <i data-lucide="users"></i> Customer Database
+        </button>
       </nav>
     </aside>
 
-    <main class="flex-1 p-4 max-w-full">
-      <section id="page-dashboard" class="page visible space-y-4">
+    <main class="flex-1 p-4 lg:p-8 max-w-5xl mx-auto w-full">
+      
+      <section id="page-dashboard" class="page visible space-y-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white p-6 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center">
+            <div class="p-3 bg-blue-50 text-blue-500 rounded-2xl mb-2"><i data-lucide="package"></i></div>
+            <p class="text-xs font-bold text-slate-400 uppercase">Total Orders</p>
+            <h2 id="total-orders" class="text-3xl font-black">0</h2>
+          </div>
+          <div class="bg-white p-6 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center">
+            <div class="p-3 bg-green-50 text-green-500 rounded-2xl mb-2"><i data-lucide="banknote"></i></div>
+            <p class="text-xs font-bold text-slate-400 uppercase">Revenue</p>
+            <h2 id="total-revenue" class="text-2xl font-black text-orange-600">0 Ks</h2>
+          </div>
+        </div>
         
-            <!-- Dashboard page ထဲမှာ -->
-<div class="grid grid-cols-2 gap-6 mb-8">
-    <div class="bg-white p-8 rounded-3xl shadow-lg text-center">
-        <h3 class="text-2xl font-black text-slate-700 mb-2">Total Orders</h3>
-        <p id="total-orders" class="text-4xl font-black text-orange-500">0</p>
-    </div>
-    <div class="bg-white p-8 rounded-3xl shadow-lg text-center">
-        <h3 class="text-2xl font-black text-slate-700 mb-2">Total Revenue</h3>
-        <p id="total-revenue" class="text-4xl font-black text-orange-500">0 Ks</p>
-    </div>
-</div>
-        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <h3 class="font-bold mb-4 text-sm">လတ်တလော အော်ဒါများ</h3>
-            <ul id="dash-recent-orders" class="space-y-3 text-sm"></ul>
+        <div class="bg-white p-6 rounded-[2rem] border shadow-sm">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="font-black text-slate-800">လတ်တလော မှာယူမှုများ</h3>
+            <button onclick="switchPage('orders')" class="text-orange-500 text-xs font-bold">See All</button>
+          </div>
+          <ul id="dash-recent-orders" class="space-y-4"></ul>
         </div>
       </section>
 
       <section id="page-add-menu" class="page">
-        <div class="bg-white p-6 rounded-3xl border shadow-sm space-y-4">
-          <div class="flex items-center gap-2">
-            <button onclick="switchPage('menu')" class="p-2 bg-slate-50 rounded-lg"><i data-lucide="arrow-left"></i></button>
-            <h3 id="form-title" class="font-bold">Add New Menu</h3>
+        <div class="max-w-xl mx-auto bg-white p-8 rounded-[2.5rem] border shadow-xl shadow-orange-900/5 space-y-6">
+          <div class="flex items-center gap-4">
+            <button onclick="switchPage('menu')" class="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <h3 id="form-title" class="font-black text-xl text-slate-800">Add New Item</h3>
           </div>
-          <form id="menu-form" class="space-y-3">
+          
+          <form id="menu-form" class="space-y-4">
             <input type="hidden" id="menu-id">
-            <input type="text" id="menu-name" placeholder="ဟင်းပွဲအမည်" class="w-full p-4 bg-slate-50 rounded-xl outline-none" required>
-            <div class="flex gap-2">
-                <input type="number" id="menu-price" placeholder="စျေးနှုန်း" class="w-1/2 p-4 bg-slate-50 rounded-xl outline-none" required>
-                <input type="number" id="menu-stock" placeholder="Stock" class="w-1/2 p-4 bg-slate-50 rounded-xl outline-none" required>
+            <div class="space-y-1">
+              <label class="text-[10px] font-bold text-slate-400 ml-2">MENU NAME</label>
+              <input type="text" id="menu-name" placeholder="ဥပမာ- ကြက်ကင်တစ်ကောင်" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
             </div>
-            <div class="space-y-2">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">ပုံထည့်ရန် (Upload or URL)</p>
-                <input type="file" id="menu-image-file" accept="image/*" class="w-full text-xs p-2 border border-dashed rounded-xl bg-slate-50">
-                <input type="text" id="menu-image-url" placeholder="သို့မဟုတ် ပုံ Link ထည့်ရန်" class="w-full p-4 bg-slate-50 rounded-xl text-xs outline-none">
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 ml-2">PRICE (KS)</label>
+                <input type="number" id="menu-price" placeholder="15000" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 ml-2">STOCK COUNT</label>
+                <input type="number" id="menu-stock" placeholder="50" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
+              </div>
             </div>
-            <button type="submit" class="w-full bg-orange-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-100">သိမ်းဆည်းမည်</button>
+
+            <div class="space-y-3 bg-slate-50 p-5 rounded-3xl border border-dashed border-slate-200">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Image Management</p>
+              <input type="file" id="menu-image-file" accept="image/*" class="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer">
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i data-lucide="link" class="w-3 h-3 text-slate-400"></i>
+                </div>
+                <input type="text" id="menu-image-url" placeholder="OR paste image URL here" class="w-full pl-8 p-3 text-xs bg-white rounded-xl outline-none border border-slate-100">
+              </div>
+            </div>
+
+            <button type="submit" id="save-btn" class="w-full bg-orange-600 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-95 transition-all">
+              SAVE TO DATABASE
+            </button>
           </form>
         </div>
       </section>
 
       <section id="page-menu" class="page space-y-4">
-        <div id="menu-list" class="grid grid-cols-1 gap-4 pb-20"></div>
+        <div class="flex justify-between items-center px-2">
+          <p class="text-xs font-bold text-slate-400 uppercase">Available Menu Items</p>
+          <button onclick="switchPage('add-menu')" class="p-2 bg-orange-500 text-white rounded-full shadow-lg"><i data-lucide="plus"></i></button>
+        </div>
+        <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24"></div>
       </section>
 
       <section id="page-orders" class="page">
-       
-          <!-- Orders Page ထဲမှာ tabs ထည့်ပါ -->
-<div class="flex gap-2 mb-6 bg-white p-4 rounded-2xl shadow-sm">
-    <button data-status="new" class="tab-btn flex-1 p-3 rounded-xl font-bold transition-all flex items-center justify-center gap-1" onclick="setOrderStatusTab('new')">
-        🆕 NEW 
-        <span id="new-order-dot" class="w-3 h-3 bg-red-500 rounded-full"></span>
-    </button>
-    <button data-status="pending" class="tab-btn flex-1 p-3 rounded-xl font-bold transition-all" onclick="setOrderStatusTab('pending')">
-        ⏳ PENDING
-    </button>
-    <button data-status="finished" class="tab-btn flex-1 p-3 rounded-xl font-bold transition-all" onclick="setOrderStatusTab('finished')">
-        ✅ FINISHED
-    </button>
-</div>
-
-<!-- Order cards container -->
-<div id="order-cards" class="space-y-4"></div>
+        <div class="flex gap-2 mb-6 p-1 bg-slate-200/50 rounded-2xl sticky top-[72px] z-[400] backdrop-blur-md">
+          <button onclick="setOrderStatusTab('new')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="new">NEW</button>
+          <button onclick="setOrderStatusTab('pending')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="pending">PENDING</button>
+          <button onclick="setOrderStatusTab('finished')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="finished">DONE</button>
+        </div>
+        <div id="order-cards" class="space-y-4 pb-24"></div>
       </section>
 
-      <section id="page-customers" class="page space-y-4">
-        <div class="bg-white p-4 rounded-3xl border max-h-48 overflow-y-auto no-scrollbar" id="customer-list-container">
-            <ul id="customer-list-items" class="divide-y divide-slate-100"></ul>
+      <section id="page-customers" class="page space-y-6">
+        <div class="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+          <div class="p-5 border-b flex items-center justify-between bg-slate-50">
+            <h3 class="font-black text-slate-800">Customer Database</h3>
+            <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <ul id="customer-list-items" class="divide-y divide-slate-100 max-h-[40vh] overflow-y-auto no-scrollbar"></ul>
         </div>
-        <div id="customer-detail-section" class="bg-white p-6 rounded-3xl border shadow-sm hidden space-y-4">
-            <div id="customer-profile-info" class="text-center pb-4 border-b"></div>
-            <div class="grid grid-cols-2 gap-3 text-center text-xs">
-                <div class="bg-orange-50 p-4 rounded-2xl"><p class="text-orange-400 text-[10px]">Total Spent</p><h4 id="cust-total-amount" class="font-black text-lg text-orange-600">0 Ks</h4></div>
-                <div class="bg-blue-50 p-4 rounded-2xl"><p class="text-blue-400 text-[10px]">Total Orders</p><h4 id="cust-total-orders" class="font-black text-lg text-blue-600">0</h4></div>
+
+        <div id="customer-detail-section" class="bg-white p-8 rounded-[2.5rem] border shadow-2xl hidden space-y-6 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4">
+             <button onclick="hideCustomerDetail()" class="p-2 bg-slate-50 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          
+          <div id="customer-profile-info"></div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-orange-50 p-6 rounded-3xl border border-orange-100">
+              <p class="text-[10px] font-bold text-orange-400 uppercase mb-1">Total Spent</p>
+              <h4 id="cust-total-amount" class="text-xl font-black text-orange-600">0 Ks</h4>
             </div>
-            <h4 class="font-bold text-sm text-slate-700">Recent Order History</h4>
-            <ul id="customer-order-history" class="space-y-2 max-h-96 overflow-y-auto no-scrollbar"></ul>
-            <button onclick="hideCustomerDetail()" class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold">← Back to Customer List</button>
+            <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100">
+              <p class="text-[10px] font-bold text-blue-400 uppercase mb-1">Orders</p>
+              <h4 id="cust-total-orders" class="text-xl font-black text-blue-600">0</h4>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <h5 class="font-black text-sm text-slate-800 flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4"></i> Order History
+            </h5>
+            <div id="customer-order-history" class="space-y-3"></div>
+          </div>
         </div>
       </section>
     </main>
@@ -145,17 +229,47 @@
   <audio id="order-sound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
 
   <script src="app.js"></script>
+  
   <script>
     lucide.createIcons();
+
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
       const ov = document.getElementById('sidebar-overlay');
       sb.classList.toggle('closed');
       ov.classList.toggle('hidden');
-      setTimeout(() => ov.classList.toggle('opacity-0'), 10);
     }
-    function toggleNotif() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
-    
+
+    function toggleNotif() {
+      document.getElementById('notif-dropdown').classList.toggle('hidden');
+      document.getElementById('notif-dot').classList.add('hidden');
+    }
+
+    function hideCustomerDetail() {
+      document.getElementById('customer-detail-section').classList.add('hidden');
+    }
+
+    // Notification Helper
+    function addNotification(msg, type) {
+      const list = document.getElementById('notif-list');
+      const dot = document.getElementById('notif-dot');
+      dot.classList.remove('hidden');
+      
+      const item = document.createElement('div');
+      item.className = `p-3 mb-2 rounded-2xl border ${type === 'order' ? 'bg-orange-50 border-orange-100' : 'bg-red-50 border-red-100'}`;
+      item.innerHTML = `
+        <div class="flex gap-3">
+          <div class="mt-1">${type === 'order' ? '🆕' : '⚠️'}</div>
+          <div>
+            <p class="font-bold">${type === 'order' ? 'Order အသစ်ရောက်ပါပြီ' : 'Stock သတိပေးချက်'}</p>
+            <p class="opacity-70">${msg}</p>
+          </div>
+        </div>
+      `;
+      if(list.querySelector('p')) list.innerHTML = '';
+      list.prepend(item);
+    }
   </script>
 </body>
-</html>
+  </html>
+
