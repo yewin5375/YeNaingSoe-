@@ -134,53 +134,62 @@ function setOrderStatusTab(status) {
 }
 
 // အပေါ်က config တွေ အဟောင်းအတိုင်းထားပါ...
-
 async function renderOrders(status) {
-    currentOrderTab = status;
+    const safeStatus = status.toLowerCase(); // 'NEW' လို့ မှားပို့ရင်တောင် 'new' ဖြစ်သွားအောင်
+    currentOrderTab = safeStatus;
+
     const container = document.getElementById('order-cards');
-    container.innerHTML = `<center class="py-20 text-slate-400 text-sm animate-pulse">Data ဆွဲနေသည်...</center>`;
+    if (!container) return; // container မရှိရင် function ရပ်မယ်
+
+    container.innerHTML = `<center class="py-20 animate-pulse text-slate-400">Loading ${safeStatus} orders...</center>`;
 
     const { data: orders, error } = await _supabase
         .from('orders')
-        .select('*, order_items(*, menus(*))')
-        .eq('status', status)
+        .select(`
+            *,
+            order_items (
+                quantity,
+                price_at_time,
+                menus ( name )
+            )
+        `)
+        .eq('status', safeStatus) // အတိအကျ စစ်မယ်
         .order('created_at', { ascending: false });
 
     if (error) {
-        container.innerHTML = `<div class="p-10 text-red-500">${error.message}</div>`;
+        console.error("Order Fetch Error:", error);
+        container.innerHTML = `<div class="p-10 text-red-500 text-center">Error: ${error.message}</div>`;
         return;
     }
 
-    if (!orders || orders.length === 0) {
-        container.innerHTML = `<center class="py-20 text-slate-400 text-sm">${status.toUpperCase()} အော်ဒါ မရှိသေးပါ</center>`;
-        return;
-    }
-
+    // မှာယူထားတဲ့ ပစ္စည်းတွေကို Loop ပတ်တဲ့အခါ null safe ဖြစ်အောင် ပြင်ထားတယ်
     container.innerHTML = orders.map(o => {
-        // Line 273 က syntax error ကို ဒီမှာ အသေအချာ ပြင်ထားပါတယ်
-        const itemsList = o.order_items ? o.order_items.map(function(i) {
-            var menuName = (i.menus && i.menus.name) ? i.menus.name : 'Unknown';
-            return `<div>${menuName} x ${i.quantity}</div>`;
-        }).join('') : '';
+        const itemsHtml = (o.order_items || []).map(i => `
+            <div class="flex justify-between text-[11px] mb-1">
+                <span>${i.menus ? i.menus.name : 'Unknown Item'} x ${i.quantity}</span>
+                <span class="font-bold">${((i.price_at_time || 0) * i.quantity).toLocaleString()} Ks</span>
+            </div>
+        `).join('');
 
         return `
-        <div class="bg-white p-5 rounded-3xl border shadow-sm mb-4">
-            <h4 class="font-bold text-slate-800">${o.customer_name}</h4>
-            <div class="text-xs text-slate-500 my-2 border-y border-dashed py-2">
-                ${itemsList}
+        <div class="order-card bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm mb-4">
+            <div class="flex justify-between items-center mb-3">
+                <h4 class="font-black text-slate-800">${o.customer_name}</h4>
+                <span class="text-[9px] bg-slate-100 px-2 py-1 rounded-lg text-slate-400 font-bold uppercase tracking-widest">${o.status}</span>
             </div>
-            <div class="flex justify-between items-center mt-3">
-                <span class="text-orange-600 font-black">${o.total_amount.toLocaleString()} Ks</span>
+            <div class="py-3 border-y border-dashed border-slate-100 mb-3">${itemsHtml}</div>
+            <div class="flex justify-between items-center">
+                <p class="text-lg font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</p>
                 <div class="flex gap-2">
-                    ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="bg-blue-500 text-white px-4 py-2 rounded-xl text-xs">Accept</button>` : ''}
-                    <button onclick="downloadVoucher('${o.id}')" class="p-2 bg-slate-100 rounded-xl"><i data-lucide="printer"></i></button>
+                    ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-orange-100">Accept</button>` : ''}
                 </div>
             </div>
         </div>`;
     }).join('');
-    
-    if(window.lucide) lucide.createIcons();
+
+    lucide.createIcons();
 }
+
 
 
 
