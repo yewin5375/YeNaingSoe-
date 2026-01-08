@@ -6,18 +6,30 @@ let currentOrderTab = 'new';
 
 // --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
 function switchPage(pageId) {
+    // page- ရှေ့ဆက်ပါသော ID များအားလုံးကို ဖျောက်ရန်
     document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
-    const targetPage = document.getElementById('page-' + pageId);
-    if (targetPage) targetPage.classList.add('visible');
     
-    document.getElementById('page-title').innerText = pageId.replace('-', ' ').toUpperCase();
+    // မှန်ကန်သော page ကို ပြရန်
+    const targetPage = document.getElementById('page-' + pageId);
+    if (targetPage) {
+        targetPage.classList.add('visible');
+    }
+    
+    // Title ပြောင်းရန်
+    const titleElement = document.getElementById('page-title');
+    if (titleElement) {
+        titleElement.innerText = pageId.replace('-', ' ').toUpperCase();
+    }
+    
     localStorage.setItem('lastPage', pageId);
 
+    // Data များ ဆွဲတင်ရန်
     if (pageId === 'dashboard') calcDashboard();
     if (pageId === 'menu') renderMenuList();
     if (pageId === 'customers') renderCustomerList();
-    if (pageId === 'orders') renderOrders(currentOrderTab);
+    if (pageId === 'orders') setOrderStatusTab(currentOrderTab); 
 }
+
 
 // --- ၂။ IMAGE UPLOAD LOGIC ---
 async function uploadImage(file) {
