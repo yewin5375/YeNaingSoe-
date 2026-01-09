@@ -2,97 +2,46 @@ const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Supabase Client ကို တစ်ခါတည်းပဲ ဆောက်ရမယ် (Realtime config ပါပြီးသား)
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    realtime: { params: { eventsPerSecond: 10 } }
-});
 
-let notifications = []; 
 
-// --- ၂။ NOTIFICATION SYSTEM ---
-function addNotification(message, type) {
-    const now = new Date();
-    const timeString = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
-    
-    notifications.unshift({
-        message: message,
-        time: timeString,
-        type: type,
-        read: false
-    });
-    renderNotificationList();
-}
 
-function renderNotificationList() {
-    const listContainer = document.getElementById('notification-list');
-    if (!listContainer) return;
-    listContainer.innerHTML = notifications.map(n => `
-        <div class="p-3 border-b hover:bg-slate-50 cursor-pointer ${n.read ? 'opacity-60' : 'bg-blue-50/50'}">
-            <p class="text-sm font-medium text-slate-700">${n.message}</p>
-            <span class="text-[10px] text-slate-400">${n.time}</span>
-        </div>
-    `).join('');
-}
+    // --- ၂။ ငါပေးတဲ့ Function ကို ဒီမှာ ထည့်ပါ ---
+    function listenOrders() {
+        console.log("Realtime စောင့်ကြည့်နေပါပြီ...");
+        _supabase
+            .channel('admin_realtime')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'orders' 
+            }, (payload) => {
+                console.log("အော်ဒါအသစ် ရောက်ပြီ!", payload);
+                
+                // အသံမြည်စေရန်
+                const audio = document.getElementById('order-sound');
+                if(audio) audio.play().catch(err => console.log("Sound Error:", err));
 
-// --- ၃။ REALTIME LISTENER (ပြင်ဆင်ပြီးသား) ---
-function listenOrders() {
-    console.log("Realtime စနစ် စတင်နေပြီ...");
-    
-    _supabase
-        .channel('admin_orders_channel') 
-        .on('postgres_changes', { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'orders' 
-        }, (payload) => {
-            console.log("အော်ဒါအသစ် ရောက်လာပြီ!", payload);
+                // Notification Bar မှာ စာပြရန်
+                if (Notification.permission === "granted") {
+                    new Notification("မှာယူမှုအသစ်!", {
+                        body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
+                    });
+                }
 
-            // ၁။ အသံမြည်စေရန်
-            const audio = document.getElementById('order-sound');
-            if(audio) {
-                audio.play().catch(err => console.log("Audio Error:", err));
-            }
+                // ခေါင်းလောင်းမှာ ဂဏန်းတိုးရန်
+                const dot = document.getElementById('admin-notif-count');
+                if(dot) {
+                    let current = parseInt(dot.innerText) || 0;
+                    dot.innerText = current + 1;
+                    dot.classList.remove('hidden');
+                }
 
-            // ၂။ Notification List ထဲ စာထည့်မယ်
-            const msg = `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
-            addNotification(msg, 'order');
-
-            // ၃။ ခေါင်းလောင်းမှာ ဂဏန်းတိုးမယ်
-            const dot = document.getElementById('admin-notif-count');
-            if(dot) {
-                let count = parseInt(dot.innerText) || 0;
-                dot.innerText = count + 1;
-                dot.classList.remove('hidden');
-            }
-
-            // ၄။ ဖုန်း Notification Bar မှာ စာပြရန်
-            if (Notification.permission === "granted") {
-                new Notification("မှာယူမှုအသစ်!", {
-                    body: msg,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
-                });
-            }
-            
-            // ၅။ UI Update (အော်ဒါစာရင်းကို တန်းပြရန်)
-            if(typeof renderOrders === 'function') renderOrders(currentOrderTab);
-            if(typeof calcDashboard === 'function') calcDashboard();
-        })
-        .subscribe((status) => {
-            console.log("Supabase Connection Status:", status);
-        });
-}
-
-// ၃။ Page ဖွင့်တာနဲ့ စတင်အလုပ်လုပ်ခိုင်းရန်
-document.addEventListener('DOMContentLoaded', () => {
-    // Notification ခွင့်ပြုချက် တောင်းခြင်း
-    if (Notification.permission !== "granted") {
-        Notification.requestPermission();
+                // အော်ဒါစာရင်းကိုပါ တန်းပြီး Refresh လုပ်ခိုင်းမယ်
+                if (typeof renderOrders === 'function') renderOrders('new');
+            })
+            .subscribe();
     }
-    
-    // Realtime စောင့်ကြည့်ခြင်းကို စတင်ခြင်း
-    listenOrders();
-});
-    
 
     // --- ၃။ Function ကို စတင်အလုပ်လုပ်ခိုင်းရန် (အရေးကြီးသည်) ---
     // ဒါလေးကိုပါ ထည့်မှ Page ဖွင့်တာနဲ့ Realtime စောင့်ကြည့်မှာပါ
@@ -108,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // မင်းရဲ့ တခြား Function တွေ (renderMenuList, etc...) က ဒီအောက်မှာ ဆက်ရှိနေမယ်
 
 
-
+let currentOrderTab = 'new';
 
 // --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
 function switchPage(pageId) {
@@ -230,7 +179,7 @@ async function deleteMenu(id) {
         if(!error) renderMenuList();
     }
 }
-let currentOrderTab = 'new';
+
 // --- ၄။ ORDER MANAGEMENT ---
 function setOrderStatusTab(status) {
     currentOrderTab = status;
@@ -504,6 +453,9 @@ async function calcDashboard() {
 }
 
 
+
+// Notification Permission Request
+if (Notification.permission === 'default') Notification.requestPermission();
 
 // INIT
 window.onload = () => {
