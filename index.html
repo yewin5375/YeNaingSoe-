@@ -91,7 +91,37 @@
             </div>
         </div>
     </div>
+      <div id="orders-overlay" class="fixed inset-0 bg-slate-50 z-[200] hidden overflow-y-auto">
+    <nav class="bg-white p-4 shadow-sm sticky top-0 flex justify-between items-center px-6">
+        <h2 class="text-xl font-bold">My Orders</h2>
+        <button onclick="closeOrders()" class="text-2xl text-slate-400">&times;</button>
+    </nav>
 
+    <div class="max-w-md mx-auto p-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm mb-6 border border-slate-100">
+            <p class="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">ဖုန်းနံပါတ်ဖြင့် အော်ဒါပြန်ရှာရန်</p>
+            <div class="flex gap-2">
+                <input type="tel" id="order-search-phone" placeholder="09..." class="flex-1 bg-slate-50 p-3 rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500">
+                <button onclick="loadMyOrders()" class="bg-orange-500 text-white px-5 rounded-xl font-bold text-sm">ရှာမည်</button>
+            </div>
+        </div>
+
+        <div class="flex border-b mb-6 bg-white rounded-t-2xl">
+            <button id="tab-active" onclick="switchTab('active')" class="flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600">Active Orders</button>
+            <button id="tab-past" onclick="switchTab('past')" class="flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent">Past Orders</button>
+        </div>
+
+        <div id="orders-list" class="space-y-4 pb-24">
+            <p class="text-center text-slate-400 py-10 italic">ဖုန်းနံပါတ်ရိုက်ပြီး အော်ဒါမှတ်တမ်းကို ရှာဖွေပါ။</p>
+        </div>
+    </div>
+</div>
+
+<button onclick="openOrders()" class="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-full shadow-2xl z-50 flex items-center gap-3 active:scale-90 transition-all">
+    <span class="text-xl">📋</span>
+    <span class="font-bold text-sm tracking-tight">My Orders</span>
+</button>
+    
     <script>
         // --- Configuration ---
         const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co'; 
@@ -272,6 +302,10 @@
             }
 
             alert("Order တင်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးတင်ပါတယ်။");
+            // အော်ဒါတင်ပြီးတာနဲ့ ဖုန်းနံပါတ်ကို search box မှာ ထည့်ပြီး tracking window ဖွင့်ပေးမယ်
+document.getElementById('order-search-phone').value = phone;
+openOrders();
+            
             // alert စာသားရဲ့ အောက်မှာ ဒါလေး ထည့်ပါ
 startRealtimeWatch(order.id);
             
@@ -317,6 +351,75 @@ async function checkHistory() {
         alert("မှာယူဖူးခြင်း မရှိသေးပါ။");
     }
        }
+
+        let currentOrderTab = 'active';
+
+function openOrders() {
+    document.getElementById('orders-overlay').classList.remove('hidden');
+    const savedPhone = localStorage.getItem('last_customer_phone');
+    if(savedPhone) {
+        document.getElementById('order-search-phone').value = savedPhone;
+        loadMyOrders();
+    }
+}
+
+function closeOrders() {
+    document.getElementById('orders-overlay').classList.add('hidden');
+}
+
+function switchTab(tab) {
+    currentOrderTab = tab;
+    document.getElementById('tab-active').className = tab === 'active' ? "flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600" : "flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent";
+    document.getElementById('tab-past').className = tab === 'past' ? "flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600" : "flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent";
+    loadMyOrders();
+}
+
+async function loadMyOrders() {
+    const phone = document.getElementById('order-search-phone').value;
+    if(!phone) return alert("ဖုန်းနံပါတ် အရင်ရိုက်ပါ");
+    
+    localStorage.setItem('last_customer_phone', phone);
+    const container = document.getElementById('orders-list');
+    container.innerHTML = `<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-4 border-orange-500 border-t-transparent rounded-full"></div></div>`;
+
+    const { data, error } = await _supabase
+        .from('orders')
+        .select('*, order_items(*, menus(name))')
+        .eq('customer_phone', phone)
+        .order('created_at', { ascending: false });
+
+    if(error || !data.length) {
+        container.innerHTML = `<p class="text-center py-10 text-slate-400 italic">မှတ်တမ်း မရှိသေးပါ။</p>`;
+        return;
+    }
+
+    const filtered = data.filter(o => currentOrderTab === 'active' ? (o.status !== 'finished' && o.status !== 'rejected') : (o.status === 'finished' || o.status === 'rejected'));
+
+    if(filtered.length === 0) {
+        container.innerHTML = `<p class="text-center py-10 text-slate-400 italic">အော်ဒါ မရှိသေးပါ။</p>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map(order => `
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <span class="text-[10px] font-black text-orange-600 uppercase bg-orange-50 px-3 py-1 rounded-full">${order.status}</span>
+                    <h3 class="font-bold text-slate-800 mt-3">${new Date(order.created_at).toLocaleDateString()}</h3>
+                </div>
+                <p class="font-black text-orange-600">${order.total_amount.toLocaleString()} Ks</p>
+            </div>
+            <div class="space-y-1 mb-2 border-t border-dashed pt-4">
+                ${order.order_items.map(item => `<p class="text-xs text-slate-500 flex justify-between"><span>${item.menus?.name} x ${item.quantity}</span> <span>${(item.price_at_time * item.quantity).toLocaleString()} Ks</span></p>`).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Real-time Update အတွက် (Admin က status ပြောင်းရင် အလိုလို update ဖြစ်အောင်)
+_supabase.channel('orders-realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
+    if(!document.getElementById('orders-overlay').classList.contains('hidden')) loadMyOrders();
+}).subscribe();
         
         fetchMenu();
     </script>
