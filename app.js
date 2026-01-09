@@ -400,28 +400,29 @@ async function calcDashboard() {
         </li>`).join('');
 }
 
-// Phone Notification Helper
-function showPhoneNotification(title, body) {
-    if (Notification.permission === "granted") {
-        new Notification(title, { body, icon: 'https://via.placeholder.com/100' });
-    } else if (Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
-}
-
-function playSound() {
-    const audio = document.getElementById('order-sound');
-    audio.play().catch(e => console.log("Sound error:", e));
-}
-
-// Listen for New Orders
-_supabase.channel('custom-insert-channel')
+// --- ပေါင်းစပ်ထားတဲ့ အော်ဒါစောင့်ကြည့်ရေးစနစ် ---
+_supabase.channel('admin-orders-channel')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-    playSound();
+    
+    // ၁။ အသံမြည်မယ် (မင်းမှာရှိပြီးသား playSound ကို သုံးမယ်)
+    playSound(); 
+
+    // ၂။ Browser မှာ စာတန်းပြမယ်
     showPhoneNotification("New Order!", `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`);
-    addNotification(`${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`, 'order');
+
+    // ၃။ ငါအခုပေးတဲ့ "ခေါင်းလောင်း" UI မှာ ဂဏန်းတိုးမယ်
+    const dot = document.getElementById('admin-notif-count');
+    if (dot) {
+        let count = parseInt(dot.innerText) || 0;
+        count++;
+        dot.innerText = count;
+        dot.classList.remove('hidden');
+    }
+
+    // ၄။ အော်ဒါစာရင်းနဲ့ Dashboard ကို Update လုပ်မယ်
     if(currentOrderTab === 'new') renderOrders('new');
-    calcDashboard();
+    if(typeof calcDashboard === 'function') calcDashboard();
+    
   })
   .subscribe();
 
