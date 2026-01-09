@@ -3,61 +3,95 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
-
-
-    // --- ၂။ ငါပေးတဲ့ Function ကို ဒီမှာ ထည့်ပါ ---
-    function listenOrders() {
-        console.log("Realtime စောင့်ကြည့်နေပါပြီ...");
-        _supabase
-            .channel('admin_realtime')
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'orders' 
-            }, (payload) => {
-                console.log("အော်ဒါအသစ် ရောက်ပြီ!", payload);
-                
-                // အသံမြည်စေရန်
-                const audio = document.getElementById('order-sound');
-                if(audio) audio.play().catch(err => console.log("Sound Error:", err));
-
-                // Notification Bar မှာ စာပြရန်
-                if (Notification.permission === "granted") {
-                    new Notification("မှာယူမှုအသစ်!", {
-                        body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
-                        icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
-                    });
-                }
-
-                // ခေါင်းလောင်းမှာ ဂဏန်းတိုးရန်
-                const dot = document.getElementById('admin-notif-count');
-                if(dot) {
-                    let current = parseInt(dot.innerText) || 0;
-                    dot.innerText = current + 1;
-                    dot.classList.remove('hidden');
-                }
-
-                // အော်ဒါစာရင်းကိုပါ တန်းပြီး Refresh လုပ်ခိုင်းမယ်
-                if (typeof renderOrders === 'function') renderOrders('new');
-            })
-            .subscribe();
-    }
-
-    // --- ၃။ Function ကို စတင်အလုပ်လုပ်ခိုင်းရန် (အရေးကြီးသည်) ---
-    // ဒါလေးကိုပါ ထည့်မှ Page ဖွင့်တာနဲ့ Realtime စောင့်ကြည့်မှာပါ
-    document.addEventListener('DOMContentLoaded', () => {
-        listenOrders(); 
-        
-        // Browser က Notification ပြခွင့်တောင်းရန်
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-    });
-
-    // မင်းရဲ့ တခြား Function တွေ (renderMenuList, etc...) က ဒီအောက်မှာ ဆက်ရှိနေမယ်
-
+// --- ၁။ CONFIGURATION ---
 
 let currentOrderTab = 'new';
+
+// --- ၂။ REALTIME LISTENER ---
+function listenOrders() {
+    console.log("Realtime စနစ် စတင်နေပြီ...");
+    
+    _supabase
+        .channel('admin_realtime')
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'orders' 
+        }, (payload) => {
+            console.log("အော်ဒါအသစ် ရောက်ပြီ!", payload);
+            
+            // ၁။ အသံမြည်ရန်
+            const audio = document.getElementById('order-sound');
+            if(audio) {
+                audio.play().catch(err => console.log("Sound Error:", err));
+            }
+
+            // ၂။ HTML ထဲက Notification List ထဲ စာထည့်ရန်
+            const customerName = payload.new.customer_name;
+            const message = `${customerName} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
+            addNotification(message, 'order');
+
+            // ၃။ ဖုန်း Notification Bar မှာ စာပြရန်
+            if (Notification.permission === "granted") {
+                new Notification("မှာယူမှုအသစ်!", {
+                    body: message,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
+                });
+            }
+
+            // ၄။ UI (Dashboard နဲ့ Orders) ကို Update လုပ်ရန်
+            if (typeof renderOrders === 'function') renderOrders(currentOrderTab);
+            if (typeof calcDashboard === 'function') calcDashboard();
+        })
+        .subscribe((status) => {
+            console.log("Connection Status:", status);
+        });
+}
+
+// --- ၃။ NOTIFICATION HELPER (HTML ထဲက Function ကို ပြန်ပြင်ထားသည်) ---
+function addNotification(msg, type) {
+    const list = document.getElementById('notif-list');
+    const dot = document.getElementById('notif-dot');
+    
+    // အနီစက်လေး ပြရန်
+    if(dot) dot.classList.remove('hidden');
+    
+    const item = document.createElement('div');
+    item.className = `p-3 mb-2 rounded-2xl border transition-all hover:bg-white cursor-pointer ${type === 'order' ? 'bg-orange-50 border-orange-100' : 'bg-red-50 border-red-100'}`;
+    
+    const now = new Date();
+    const time = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+
+    item.innerHTML = `
+      <div class="flex gap-3">
+        <div class="mt-1">${type === 'order' ? '🍗' : '⚠️'}</div>
+        <div class="flex-1">
+          <p class="font-bold text-slate-700">${type === 'order' ? 'Order အသစ်ရောက်ပါပြီ' : 'Stock သတိပေးချက်'}</p>
+          <p class="opacity-70 text-[11px]">${msg}</p>
+          <p class="text-[9px] mt-1 text-slate-400">${time}</p>
+        </div>
+      </div>
+    `;
+
+    // "သတိပေးချက်မရှိသေးပါ" ဆိုတဲ့ စာသားရှိရင် ဖျက်မယ်
+    if(list.querySelector('p.text-center')) list.innerHTML = '';
+    
+    // စာရင်းအသစ်ကို အပေါ်ဆုံးက ထည့်မယ်
+    list.prepend(item);
+}
+
+// --- ၄။ PAGE STARTUP ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Realtime စတင်ခြင်း
+    listenOrders();
+    
+    // Notification Permission တောင်းခြင်း
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+});
+
+// မင်းရဲ့ တခြား function တွေ (switchPage, renderOrders, etc.) ကို ဒီအောက်မှာ ဆက်ထည့်ပါ...
 
 // --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
 function switchPage(pageId) {
