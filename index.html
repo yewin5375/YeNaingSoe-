@@ -93,26 +93,26 @@
     </div>
       <div id="orders-overlay" class="fixed inset-0 bg-slate-50 z-[200] hidden overflow-y-auto">
     <nav class="bg-white p-4 shadow-sm sticky top-0 flex justify-between items-center px-6">
-        <h2 class="text-xl font-bold">My Orders</h2>
-        <button onclick="closeOrders()" class="text-2xl text-slate-400">&times;</button>
+        <h2 class="text-xl font-bold italic text-orange-600">MY ORDERS</h2>
+        <button onclick="closeOrders()" class="text-3xl text-slate-400 leading-none">&times;</button>
     </nav>
 
     <div class="max-w-md mx-auto p-4">
-        <div class="bg-white p-4 rounded-2xl shadow-sm mb-6 border border-slate-100">
+        <div class="bg-white p-5 rounded-3xl shadow-sm mb-6 border border-slate-100">
             <p class="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">ဖုန်းနံပါတ်ဖြင့် အော်ဒါပြန်ရှာရန်</p>
             <div class="flex gap-2">
                 <input type="tel" id="order-search-phone" placeholder="09..." class="flex-1 bg-slate-50 p-3 rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500">
-                <button onclick="loadMyOrders()" class="bg-orange-500 text-white px-5 rounded-xl font-bold text-sm">ရှာမည်</button>
+                <button onclick="loadMyOrders()" class="bg-orange-500 text-white px-5 rounded-xl font-bold text-sm active:scale-95 transition-all">ရှာမည်</button>
             </div>
         </div>
 
-        <div class="flex border-b mb-6 bg-white rounded-t-2xl">
-            <button id="tab-active" onclick="switchTab('active')" class="flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600">Active Orders</button>
-            <button id="tab-past" onclick="switchTab('past')" class="flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent">Past Orders</button>
+        <div class="flex border-b mb-6 bg-white rounded-t-3xl overflow-hidden">
+            <button id="tab-active" onclick="switchTab('active')" class="flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600 transition-all">Active Orders</button>
+            <button id="tab-past" onclick="switchTab('past')" class="flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent transition-all">Past Orders</button>
         </div>
 
         <div id="orders-list" class="space-y-4 pb-24">
-            <p class="text-center text-slate-400 py-10 italic">ဖုန်းနံပါတ်ရိုက်ပြီး အော်ဒါမှတ်တမ်းကို ရှာဖွေပါ။</p>
+            <p class="text-center text-slate-400 py-10 italic">အော်ဒါမှတ်တမ်းကို ဖုန်းနံပါတ်ဖြင့် ရှာဖွေပါ။</p>
         </div>
     </div>
 </div>
@@ -121,6 +121,7 @@
     <span class="text-xl">📋</span>
     <span class="font-bold text-sm tracking-tight">My Orders</span>
 </button>
+
     
     <script>
         // --- Configuration ---
@@ -354,6 +355,7 @@ async function checkHistory() {
 
         let currentOrderTab = 'active';
 
+// Window ဖွင့်ခြင်း/ပိတ်ခြင်း
 function openOrders() {
     document.getElementById('orders-overlay').classList.remove('hidden');
     const savedPhone = localStorage.getItem('last_customer_phone');
@@ -367,6 +369,7 @@ function closeOrders() {
     document.getElementById('orders-overlay').classList.add('hidden');
 }
 
+// Tab ပြောင်းခြင်း
 function switchTab(tab) {
     currentOrderTab = tab;
     document.getElementById('tab-active').className = tab === 'active' ? "flex-1 py-4 font-bold border-b-2 border-orange-500 text-orange-600" : "flex-1 py-4 font-bold text-slate-400 border-b-2 border-transparent";
@@ -374,13 +377,14 @@ function switchTab(tab) {
     loadMyOrders();
 }
 
+// Database မှ အော်ဒါများ ဆွဲထုတ်ခြင်း
 async function loadMyOrders() {
     const phone = document.getElementById('order-search-phone').value;
     if(!phone) return alert("ဖုန်းနံပါတ် အရင်ရိုက်ပါ");
     
     localStorage.setItem('last_customer_phone', phone);
     const container = document.getElementById('orders-list');
-    container.innerHTML = `<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-4 border-orange-500 border-t-transparent rounded-full"></div></div>`;
+    container.innerHTML = `<div class="text-center py-10"><div class="animate-spin inline-block w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"></div></div>`;
 
     const { data, error } = await _supabase
         .from('orders')
@@ -389,38 +393,46 @@ async function loadMyOrders() {
         .order('created_at', { ascending: false });
 
     if(error || !data.length) {
+        container.innerHTML = `<p class="text-center py-10 text-slate-400 italic">အော်ဒါမှတ်တမ်း မရှိသေးပါ။</p>`;
+        return;
+    }
+
+    // Tab အလိုက် Filter စစ်ခြင်း
+    const filtered = data.filter(o => 
+        currentOrderTab === 'active' ? (o.status !== 'finished' && o.status !== 'rejected') : (o.status === 'finished' || o.status === 'rejected')
+    );
+
+    if(filtered.length === 0) {
         container.innerHTML = `<p class="text-center py-10 text-slate-400 italic">မှတ်တမ်း မရှိသေးပါ။</p>`;
         return;
     }
 
-    const filtered = data.filter(o => currentOrderTab === 'active' ? (o.status !== 'finished' && o.status !== 'rejected') : (o.status === 'finished' || o.status === 'rejected'));
-
-    if(filtered.length === 0) {
-        container.innerHTML = `<p class="text-center py-10 text-slate-400 italic">အော်ဒါ မရှိသေးပါ။</p>`;
-        return;
-    }
-
     container.innerHTML = filtered.map(order => `
-        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 transition-all hover:shadow-md">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <span class="text-[10px] font-black text-orange-600 uppercase bg-orange-50 px-3 py-1 rounded-full">${order.status}</span>
-                    <h3 class="font-bold text-slate-800 mt-3">${new Date(order.created_at).toLocaleDateString()}</h3>
+                    <span class="text-[10px] font-black text-orange-600 uppercase bg-orange-50 px-3 py-1 rounded-full ring-1 ring-orange-200">${order.status}</span>
+                    <h3 class="font-bold text-slate-800 mt-4">${new Date(order.created_at).toLocaleDateString()}</h3>
                 </div>
-                <p class="font-black text-orange-600">${order.total_amount.toLocaleString()} Ks</p>
+                <p class="font-black text-lg text-slate-800">${order.total_amount.toLocaleString()} <span class="text-[10px] text-slate-400 ml-1">MMK</span></p>
             </div>
-            <div class="space-y-1 mb-2 border-t border-dashed pt-4">
-                ${order.order_items.map(item => `<p class="text-xs text-slate-500 flex justify-between"><span>${item.menus?.name} x ${item.quantity}</span> <span>${(item.price_at_time * item.quantity).toLocaleString()} Ks</span></p>`).join('')}
+            <div class="space-y-2 mb-2 border-t border-dashed pt-4">
+                ${order.order_items.map(item => `
+                    <p class="text-xs text-slate-500 flex justify-between font-medium">
+                        <span>${item.menus?.name || 'ဟင်းပွဲ'} x ${item.quantity}</span> 
+                        <span>${(item.price_at_time * item.quantity).toLocaleString()} Ks</span>
+                    </p>
+                `).join('')}
             </div>
         </div>
     `).join('');
 }
 
-// Real-time Update အတွက် (Admin က status ပြောင်းရင် အလိုလို update ဖြစ်အောင်)
+// Real-time Update (Admin က status ပြောင်းရင် အလိုလို update ဖြစ်အောင်)
 _supabase.channel('orders-realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
     if(!document.getElementById('orders-overlay').classList.contains('hidden')) loadMyOrders();
 }).subscribe();
-        
+
         fetchMenu();
     </script>
 </body>
