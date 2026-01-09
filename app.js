@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+let notifications = []; // Notification စာရင်းတွေကို သိမ်းထားမယ့်နေရာ
 
 // ၁။ Supabase ချိတ်ဆက်မှု (Realtime Setting ထည့်ထားသည်)
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -22,9 +23,26 @@ function listenOrders() {
             event: 'INSERT', 
             schema: 'public', 
             table: 'orders' 
-        }, (payload) => {
-            console.log("အော်ဒါအသစ် ရောက်လာပြီ!", payload);
+        
+}, (payload) => {
+    // ၁။ အသံမြည်မယ်
+    if(typeof playSound === 'function') playSound();
 
+    // ၂။ Notification List ထဲ စာထည့်မယ်
+    const msg = `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
+    addNotification(msg, 'order');
+
+    // ၃။ ခေါင်းလောင်းမှာ ဂဏန်းတိုးမယ်
+    const dot = document.getElementById('admin-notif-count');
+    if(dot) {
+        let count = parseInt(dot.innerText) || 0;
+        dot.innerText = count + 1;
+        dot.classList.remove('hidden');
+    }
+    
+    // ... ကျန်တဲ့ code များ ...
+})
+  
             // အသံမြည်စေရန်
             const audio = document.getElementById('order-sound');
             if(audio) {
@@ -468,6 +486,34 @@ async function calcDashboard() {
         </li>`).join('');
 }
 
+function addNotification(message, type) {
+    const now = new Date();
+    const timeString = now.getHours() + ":" + now.getMinutes();
+    
+    // Notification အသစ်ကို array ထဲ ထည့်မယ်
+    notifications.unshift({
+        message: message,
+        time: timeString,
+        type: type,
+        read: false
+    });
+
+    // ခေါင်းလောင်း UI ကို update လုပ်မယ်
+    renderNotificationList();
+}
+
+// ခေါင်းလောင်းထဲက စာရင်းကို ဆွဲထုတ်ပြမယ့် function
+function renderNotificationList() {
+    const listContainer = document.getElementById('notification-list'); // ဒါက မင်းရဲ့ HTML ထဲက notification ပြမယ့် နေရာ ID ဖြစ်ရမယ်
+    if (!listContainer) return;
+
+    listContainer.innerHTML = notifications.map(n => `
+        <div class="p-3 border-b hover:bg-slate-50 cursor-pointer ${n.read ? 'opacity-60' : 'bg-blue-50/50'}">
+            <p class="text-sm font-medium text-slate-700">${n.message}</p>
+            <span class="text-[10px] text-slate-400">${n.time}</span>
+        </div>
+    `).join('');
+}
 
 
 // Notification Permission Request
