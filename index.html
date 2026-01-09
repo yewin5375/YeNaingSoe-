@@ -13,6 +13,25 @@
         .menu-card { transition: transform 0.2s; }
         .menu-card:hover { transform: translateY(-5px); }
         #cart-modal { backdrop-filter: blur(4px); }
+        /* ခြင်းတောင်းအကွက်အတွက် Dynamic Height */
+#cart-items {
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 160px; /* မူလအမြင့် (သေးသေးလေး) */
+}
+
+/* ကြီးလာတဲ့အချိန်မှာ သုံးမယ့် Class */
+#cart-items.expanded {
+    max-height: 65vh; /* Screen ရဲ့ 65% အထိ ကြီးလာမယ် */
+}
+
+/* အပြင်ကနေရာလွတ်ကို နှိပ်ရင် ပိတ်ဖို့ Overlay */
+#cart-height-overlay {
+    display: none;
+}
+#cart-height-overlay.show {
+    display: block;
+}
+        
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -46,57 +65,54 @@
         </div>
     </main>
 
-    <div id="cart-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[100] transition-opacity">
-        <div class="bg-white w-full max-w-md ml-auto h-full p-6 shadow-2xl flex flex-col">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h2 class="text-2xl font-bold">🛒 ခြင်းတောင်း</h2>
-                <button onclick="toggleCart()" class="text-slate-400 hover:text-slate-900 text-3xl font-light">&times;</button>
+<div id="cart-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[100] transition-opacity">
+    <div id="cart-height-overlay" class="absolute inset-0 z-0" onclick="toggleCartHeight(false)"></div>
+
+    <div class="relative bg-white w-full max-w-md ml-auto h-full p-6 shadow-2xl flex flex-col z-10">
+        <div class="flex justify-between items-center mb-4 border-b pb-4">
+            <h2 class="text-2xl font-bold italic text-slate-800">🛒 MY CART</h2>
+            <button onclick="toggleCart()" class="text-slate-400 hover:text-orange-500 text-3xl font-light leading-none">&times;</button>
+        </div>
+        
+        <div id="cart-items" onclick="toggleCartHeight(true)" class="overflow-y-auto space-y-4 pr-2 bg-slate-50 p-3 rounded-2xl border-2 border-transparent hover:border-orange-100 transition-all cursor-pointer relative min-h-[100px]">
+            <div id="expand-hint" class="absolute bottom-1 right-3 text-[9px] font-bold text-orange-400 animate-pulse">နှိပ်ပြီး ပြင်ဆင်ရန် ↗</div>
+        </div>
+
+        <div class="border-t pt-4 mt-4 flex-1 flex flex-col overflow-hidden">
+            <div class="flex justify-between text-xl font-black mb-4 px-2">
+                <span>Total:</span>
+                <span class="text-orange-600 font-black"><span id="cart-total">0</span> MMK</span>
             </div>
-            
-            <div id="cart-items" class="flex-1 overflow-y-auto space-y-4 pr-2">
-                <p class="text-center text-slate-400 py-10">ခြင်းတောင်းထဲမှာ ဘာမှမရှိသေးပါ။</p>
-            </div>
 
-            <div class="border-t pt-6 mt-4">
-                <div class="flex justify-between text-xl font-bold mb-6 px-2">
-                    <span>Total Amount:</span>
-                    <span class="text-orange-600"><span id="cart-total">0</span> MMK</span>
-                </div>
-
-                <form id="order-form" class="space-y-4 bg-slate-50 p-4 rounded-2xl">
-                    <div class="grid grid-cols-1 gap-4">
-                        <input type="text" id="cust-name" placeholder="သင့်နာမည်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
-                        <input type="tel" id="cust-phone" placeholder="ဖုန်းနံပါတ်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
-                        <button type="button" onclick="checkHistory()" class="text-xs text-orange-500 font-bold mt-2">🕒 အရင်အော်ဒါဟောင်းများ ကြည့်ရန်</button>
-
-
-                        <div class="flex gap-3">
-                            <div class="w-1/2">
-                                <label class="text-xs font-bold text-slate-400 ml-1">Pickup Date</label>
-                                <input type="date" id="pickup-date" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
-                            </div>
-                            <div class="w-1/2">
-                                <label class="text-xs font-bold text-slate-400 ml-1">Pickup Time</label>
-                                <input type="time" id="pickup-time" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
-                            </div>
-                        </div>
-                        
-                        <textarea id="note" rows="2" placeholder="မှတ်ချက် (ဥပမာ- အစပ်မစားပါ)" class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition"></textarea>
+            <form id="order-form" class="space-y-3 bg-slate-50 p-4 rounded-3xl overflow-y-auto flex-1">
+                <input type="text" id="cust-name" placeholder="သင့်နာမည်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
+                <input type="tel" id="cust-phone" placeholder="ဖုန်းနံပါတ်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
+                
+                <div class="flex gap-2">
+                    <div class="w-1/2">
+                        <label class="text-[10px] font-bold text-slate-400 ml-1">Date</label>
+                        <input type="date" id="pickup-date" required class="w-full border-none ring-1 ring-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
                     </div>
-                    
-                    <button type="submit" id="submit-btn" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 active:scale-95 transition-all shadow-lg shadow-orange-200">
-                        Confirm Order
-                    </button>
-                </form>
-            </div>
+                    <div class="w-1/2">
+                        <label class="text-[10px] font-bold text-slate-400 ml-1">Time</label>
+                        <input type="time" id="pickup-time" required class="w-full border-none ring-1 ring-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
+                    </div>
+                </div>
+                
+                <textarea id="note" rows="2" placeholder="မှတ်ချက်" class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm"></textarea>
+                
+                <button type="submit" id="submit-btn" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-black text-lg hover:bg-orange-600 active:scale-95 transition-all shadow-lg shadow-orange-100 mt-2">
+                    CONFIRM ORDER
+                </button>
+            </form>
         </div>
     </div>
-      <div id="orders-overlay" class="fixed inset-0 bg-slate-50 z-[200] hidden overflow-y-auto">
+</div>
+    <div id="orders-overlay" class="fixed inset-0 bg-slate-50 z-[200] hidden overflow-y-auto">
     <nav class="bg-white p-4 shadow-sm sticky top-0 flex justify-between items-center px-6">
         <h2 class="text-xl font-bold italic text-orange-600">MY ORDERS</h2>
         <button onclick="closeOrders()" class="text-3xl text-slate-400 leading-none">&times;</button>
     </nav>
-
     <div class="max-w-md mx-auto p-4">
         <div class="bg-white p-5 rounded-3xl shadow-sm mb-6 border border-slate-100">
             <p class="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">ဖုန်းနံပါတ်ဖြင့် အော်ဒါပြန်ရှာရန်</p>
@@ -235,7 +251,22 @@
             const modal = document.getElementById('cart-modal');
             modal.classList.toggle('hidden');
         };
+         function toggleCartHeight(expand) {
+    const cartBox = document.getElementById('cart-items');
+    const overlay = document.getElementById('cart-height-overlay');
+    const hint = document.getElementById('expand-hint');
 
+    if (expand) {
+        cartBox.classList.add('expanded');
+        overlay.classList.add('show');
+        if(hint) hint.style.display = 'none'; // ကြီးသွားရင် hint ဖျောက်မယ်
+    } else {
+        cartBox.classList.remove('expanded');
+        overlay.classList.remove('show');
+        if(hint) hint.style.display = 'block'; // သေးသွားရင် hint ပြန်ပြမယ်
+    }
+         }
+        
         // --- Submit Order ---
                 // --- Submit Order (Updated for New SQL) ---
         document.getElementById('order-form').addEventListener('submit', async (e) => {
