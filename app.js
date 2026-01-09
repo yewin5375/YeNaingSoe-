@@ -8,7 +8,6 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 let notifications = []; 
-let currentOrderTab = 'new';
 
 // --- ၂။ NOTIFICATION SYSTEM ---
 function addNotification(message, type) {
@@ -231,7 +230,7 @@ async function deleteMenu(id) {
         if(!error) renderMenuList();
     }
 }
-
+let currentOrderTab = 'new';
 // --- ၄။ ORDER MANAGEMENT ---
 function setOrderStatusTab(status) {
     currentOrderTab = status;
