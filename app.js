@@ -504,38 +504,7 @@ async function calcDashboard() {
         </li>`).join('');
 }
 
-function addNotification(message, type) {
-    const now = new Date();
-    const timeString = now.getHours() + ":" + now.getMinutes();
-    
-    // Notification အသစ်ကို array ထဲ ထည့်မယ်
-    notifications.unshift({
-        message: message,
-        time: timeString,
-        type: type,
-        read: false
-    });
 
-    // ခေါင်းလောင်း UI ကို update လုပ်မယ်
-    renderNotificationList();
-}
-
-// ခေါင်းလောင်းထဲက စာရင်းကို ဆွဲထုတ်ပြမယ့် function
-function renderNotificationList() {
-    const listContainer = document.getElementById('notification-list'); // ဒါက မင်းရဲ့ HTML ထဲက notification ပြမယ့် နေရာ ID ဖြစ်ရမယ်
-    if (!listContainer) return;
-
-    listContainer.innerHTML = notifications.map(n => `
-        <div class="p-3 border-b hover:bg-slate-50 cursor-pointer ${n.read ? 'opacity-60' : 'bg-blue-50/50'}">
-            <p class="text-sm font-medium text-slate-700">${n.message}</p>
-            <span class="text-[10px] text-slate-400">${n.time}</span>
-        </div>
-    `).join('');
-}
-
-
-// Notification Permission Request
-if (Notification.permission === 'default') Notification.requestPermission();
 
 // INIT
 window.onload = () => {
