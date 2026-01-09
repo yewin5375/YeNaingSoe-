@@ -3,22 +3,35 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
+// ၁။ Supabase ချိတ်ဆက်မှု (Realtime Setting ထည့်ထားသည်)
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+});
 
-
-    // --- ၂။ ငါပေးတဲ့ Function ကို ဒီမှာ ထည့်ပါ ---
-    function listenOrders() {
+// ၂။ အော်ဒါအသစ်ကို နားထောင်မည့် Function
+function listenOrders() {
+    console.log("Realtime စနစ် စတင်နေပြီ...");
+    
     _supabase
-        .channel('any_name') 
+        .channel('admin_orders_channel') 
         .on('postgres_changes', { 
             event: 'INSERT', 
             schema: 'public', 
             table: 'orders' 
         }, (payload) => {
-            // ၁။ အသံမြည်စေရန်
-            const audio = document.getElementById('order-sound');
-            if(audio) audio.play();
+            console.log("အော်ဒါအသစ် ရောက်လာပြီ!", payload);
 
-            // ၂။ ဖုန်း Notification Bar မှာ စာပြရန်
+            // အသံမြည်စေရန်
+            const audio = document.getElementById('order-sound');
+            if(audio) {
+                audio.play().catch(err => console.log("အသံဖွင့်မရပါ (Browser က ပိတ်ထားသလား?)", err));
+            }
+
+            // ဖုန်း Notification Bar မှာ စာပြရန်
             if (Notification.permission === "granted") {
                 new Notification("မှာယူမှုအသစ်!", {
                     body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
@@ -26,12 +39,24 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 });
             }
             
-            // ၃။ UI Update လုပ်ရန်
+            // UI Update (အော်ဒါစာရင်းကို တန်းပြရန်)
             if(typeof renderOrders === 'function') renderOrders('new');
         })
-        .subscribe();
+        .subscribe((status) => {
+            console.log("ချိတ်ဆက်မှု အခြေအနေ:", status);
+        });
 }
 
+// ၃။ Page ဖွင့်တာနဲ့ စတင်အလုပ်လုပ်ခိုင်းရန်
+document.addEventListener('DOMContentLoaded', () => {
+    // Notification ခွင့်ပြုချက် တောင်းခြင်း
+    if (Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+    
+    // Realtime စောင့်ကြည့်ခြင်းကို စတင်ခြင်း
+    listenOrders();
+});
     
 
     // --- ၃။ Function ကို စတင်အလုပ်လုပ်ခိုင်းရန် (အရေးကြီးသည်) ---
