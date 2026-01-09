@@ -39,12 +39,19 @@ function listenOrders() {
                 });
             }
 
-            // ၄။ UI (Dashboard နဲ့ Orders) ကို Update လုပ်ရန်
+              // ၄။ UI Refresh လုပ်ရန်
             if (typeof renderOrders === 'function') renderOrders(currentOrderTab);
-            if (typeof calcDashboard === 'function') calcDashboard();
         })
         .subscribe((status) => {
             console.log("Connection Status:", status);
+            
+            // CHANNEL_ERROR ဖြစ်ရင် ၅ စက္ကန့်နေရင် ပြန်ချိတ်ခိုင်းမယ်
+            if (status === 'CHANNEL_ERROR') {
+                console.log("ချိတ်ဆက်မှု ပြတ်တောက်သွားသဖြင့် ၅ စက္ကန့်အကြာတွင် ပြန်ချိတ်ပါမည်...");
+                setTimeout(() => {
+                    listenOrders();
+                }, 5000);
+            }
         });
 }
 
