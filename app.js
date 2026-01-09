@@ -7,41 +7,32 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // --- ၂။ ငါပေးတဲ့ Function ကို ဒီမှာ ထည့်ပါ ---
     function listenOrders() {
-        console.log("Realtime စောင့်ကြည့်နေပါပြီ...");
-        _supabase
-            .channel('admin_realtime')
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'orders' 
-            }, (payload) => {
-                console.log("အော်ဒါအသစ် ရောက်ပြီ!", payload);
-                
-                // အသံမြည်စေရန်
-                const audio = document.getElementById('order-sound');
-                if(audio) audio.play().catch(err => console.log("Sound Error:", err));
+    _supabase
+        .channel('any_name') 
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'orders' 
+        }, (payload) => {
+            // ၁။ အသံမြည်စေရန်
+            const audio = document.getElementById('order-sound');
+            if(audio) audio.play();
 
-                // Notification Bar မှာ စာပြရန်
-                if (Notification.permission === "granted") {
-                    new Notification("မှာယူမှုအသစ်!", {
-                        body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
-                        icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
-                    });
-                }
+            // ၂။ ဖုန်း Notification Bar မှာ စာပြရန်
+            if (Notification.permission === "granted") {
+                new Notification("မှာယူမှုအသစ်!", {
+                    body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
+                });
+            }
+            
+            // ၃။ UI Update လုပ်ရန်
+            if(typeof renderOrders === 'function') renderOrders('new');
+        })
+        .subscribe();
+}
 
-                // ခေါင်းလောင်းမှာ ဂဏန်းတိုးရန်
-                const dot = document.getElementById('admin-notif-count');
-                if(dot) {
-                    let current = parseInt(dot.innerText) || 0;
-                    dot.innerText = current + 1;
-                    dot.classList.remove('hidden');
-                }
-
-                // အော်ဒါစာရင်းကိုပါ တန်းပြီး Refresh လုပ်ခိုင်းမယ်
-                if (typeof renderOrders === 'function') renderOrders('new');
-            })
-            .subscribe();
-    }
+    
 
     // --- ၃။ Function ကို စတင်အလုပ်လုပ်ခိုင်းရန် (အရေးကြီးသည်) ---
     // ဒါလေးကိုပါ ထည့်မှ Page ဖွင့်တာနဲ့ Realtime စောင့်ကြည့်မှာပါ
