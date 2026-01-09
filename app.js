@@ -35,7 +35,7 @@ function switchPage(pageId) {
 async function uploadImage(file) {
     const fileName = `${Date.now()}_${file.name}`;
     const { data, error } = await _supabase.storage
-        .from('menu-images')
+        .from('menus')
         .upload(fileName, file);
     if (error) return null;
     const { data: publicUrl } = _supabase.storage.from('menu-images').getPublicUrl(fileName);
@@ -91,7 +91,9 @@ async function renderMenuList() {
     const container = document.getElementById('menu-list');
     container.innerHTML = menus.map(m => `
         <div class="bg-white p-4 rounded-3xl border flex gap-4 items-center shadow-sm hover:shadow-md transition-shadow">
-            <img src="${m.image_url || 'https://via.placeholder.com/80'}" class="w-20 h-20 rounded-2xl object-cover bg-slate-100 shadow-inner">
+            <img src="${m.image_url ? m.image_url : 'https://via.placeholder.com/150?text=No+Image'}" 
+     class="w-20 h-20 rounded-2xl object-cover bg-slate-100 shadow-inner"
+     onerror="this.src='https://via.placeholder.com/150?text=Error'">
             <div class="flex-1">
                 <h4 class="font-bold text-slate-700">${m.name}</h4>
                 <p class="text-orange-500 font-bold text-sm">${m.price.toLocaleString()} Ks</p>
