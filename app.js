@@ -2,18 +2,40 @@ const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let notifications = []; // Notification စာရင်းတွေကို သိမ်းထားမယ့်နေရာ
-
-// ၁။ Supabase ချိတ်ဆက်မှု (Realtime Setting ထည့်ထားသည်)
+// Supabase Client ကို တစ်ခါတည်းပဲ ဆောက်ရမယ် (Realtime config ပါပြီးသား)
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
+    realtime: { params: { eventsPerSecond: 10 } }
 });
 
-// ၂။ အော်ဒါအသစ်ကို နားထောင်မည့် Function
+let notifications = []; 
+let currentOrderTab = 'new';
+
+// --- ၂။ NOTIFICATION SYSTEM ---
+function addNotification(message, type) {
+    const now = new Date();
+    const timeString = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+    
+    notifications.unshift({
+        message: message,
+        time: timeString,
+        type: type,
+        read: false
+    });
+    renderNotificationList();
+}
+
+function renderNotificationList() {
+    const listContainer = document.getElementById('notification-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = notifications.map(n => `
+        <div class="p-3 border-b hover:bg-slate-50 cursor-pointer ${n.read ? 'opacity-60' : 'bg-blue-50/50'}">
+            <p class="text-sm font-medium text-slate-700">${n.message}</p>
+            <span class="text-[10px] text-slate-400">${n.time}</span>
+        </div>
+    `).join('');
+}
+
+// --- ၃။ REALTIME LISTENER (ပြင်ဆင်ပြီးသား) ---
 function listenOrders() {
     console.log("Realtime စနစ် စတင်နေပြီ...");
     
@@ -23,45 +45,41 @@ function listenOrders() {
             event: 'INSERT', 
             schema: 'public', 
             table: 'orders' 
-        
-}, (payload) => {
-    // ၁။ အသံမြည်မယ်
-    if(typeof playSound === 'function') playSound();
+        }, (payload) => {
+            console.log("အော်ဒါအသစ် ရောက်လာပြီ!", payload);
 
-    // ၂။ Notification List ထဲ စာထည့်မယ်
-    const msg = `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
-    addNotification(msg, 'order');
-
-    // ၃။ ခေါင်းလောင်းမှာ ဂဏန်းတိုးမယ်
-    const dot = document.getElementById('admin-notif-count');
-    if(dot) {
-        let count = parseInt(dot.innerText) || 0;
-        dot.innerText = count + 1;
-        dot.classList.remove('hidden');
-    }
-    
-    // ... ကျန်တဲ့ code များ ...
-})
-  
-            // အသံမြည်စေရန်
+            // ၁။ အသံမြည်စေရန်
             const audio = document.getElementById('order-sound');
             if(audio) {
-                audio.play().catch(err => console.log("အသံဖွင့်မရပါ (Browser က ပိတ်ထားသလား?)", err));
+                audio.play().catch(err => console.log("Audio Error:", err));
             }
 
-            // ဖုန်း Notification Bar မှာ စာပြရန်
+            // ၂။ Notification List ထဲ စာထည့်မယ်
+            const msg = `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
+            addNotification(msg, 'order');
+
+            // ၃။ ခေါင်းလောင်းမှာ ဂဏန်းတိုးမယ်
+            const dot = document.getElementById('admin-notif-count');
+            if(dot) {
+                let count = parseInt(dot.innerText) || 0;
+                dot.innerText = count + 1;
+                dot.classList.remove('hidden');
+            }
+
+            // ၄။ ဖုန်း Notification Bar မှာ စာပြရန်
             if (Notification.permission === "granted") {
                 new Notification("မှာယူမှုအသစ်!", {
-                    body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
+                    body: msg,
                     icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
                 });
             }
             
-            // UI Update (အော်ဒါစာရင်းကို တန်းပြရန်)
-            if(typeof renderOrders === 'function') renderOrders('new');
+            // ၅။ UI Update (အော်ဒါစာရင်းကို တန်းပြရန်)
+            if(typeof renderOrders === 'function') renderOrders(currentOrderTab);
+            if(typeof calcDashboard === 'function') calcDashboard();
         })
         .subscribe((status) => {
-            console.log("ချိတ်ဆက်မှု အခြေအနေ:", status);
+            console.log("Supabase Connection Status:", status);
         });
 }
 
