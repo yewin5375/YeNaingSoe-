@@ -134,71 +134,108 @@ function setOrderStatusTab(status) {
 }
 
 // အပေါ်က config တွေ အဟောင်းအတိုင်းထားပါ...
-async function renderOrders(status) {
-    const safeStatus = status.toLowerCase(); // 'NEW' လို့ မှားပို့ရင်တောင် 'new' ဖြစ်သွားအောင်
-    currentOrderTab = safeStatus;
+async function renderOrders(statusTab) {
+    const container = document.getElementById('order-cards'); // HTML ထဲက id နဲ့ ကိုက်ရပါမယ်
+    if (!container) return;
 
-    const container = document.getElementById('order-cards');
-    if (!container) return; // container မရှိရင် function ရပ်မယ်
-
-    container.innerHTML = `<center class="py-20 animate-pulse text-slate-400">Loading ${safeStatus} orders...</center>`;
+    container.innerHTML = `<p class="text-center py-10 opacity-50">Loading orders...</p>`;
 
     const { data: orders, error } = await _supabase
         .from('orders')
         .select(`
             *,
+            customer_users (
+                is_trusted,
+                is_blocked,
+                order_count
+            ),
             order_items (
                 quantity,
                 price_at_time,
                 menus ( name )
             )
         `)
-        .eq('status', safeStatus) // အတိအကျ စစ်မယ်
+        .eq('status', statusTab)
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Order Fetch Error:", error);
-        container.innerHTML = `<div class="p-10 text-red-500 text-center">Error: ${error.message}</div>`;
+        container.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
         return;
     }
 
-    // မှာယူထားတဲ့ ပစ္စည်းတွေကို Loop ပတ်တဲ့အခါ null safe ဖြစ်အောင် ပြင်ထားတယ်
-    container.innerHTML = orders.map(o => {
-        const itemsHtml = (o.order_items || []).map(i => `
-            <div class="flex justify-between text-[11px] mb-1">
-                <span>${i.menus ? i.menus.name : 'Unknown Item'} x ${i.quantity}</span>
-                <span class="font-bold">${((i.price_at_time || 0) * i.quantity).toLocaleString()} Ks</span>
+    if (orders.length === 0) {
+        container.innerHTML = `<p class="text-center py-10 opacity-50">ယခုအချိန်တွင် ${statusTab} အော်ဒါမရှိသေးပါ။</p>`;
+        return;
+    }
+
+    container.innerHTML = orders.map(order => {
+        // Customer Status ကို Badge လေးနဲ့ ပြမယ်
+        let trustBadge = '';
+        const user = order.customer_users;
+        
+        if (user?.is_blocked) {
+            trustBadge = `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded-md font-bold">BLOCKED 🚫</span>`;
+        } else if (user?.is_trusted) {
+            trustBadge = `<span class="bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded-md font-bold">TRUSTED ✅</span>`;
+        } else if (user?.order_count > 0) {
+            trustBadge = `<span class="bg-blue-100 text-blue-600 text-[10px] px-2 py-1 rounded-md font-bold">OLD (${user.order_count})</span>`;
+        } else {
+            trustBadge = `<span class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-md font-bold">NEW CUSTOMER 🆕</span>`;
+        }
+
+        const itemsHtml = order.order_items.map(item => `
+            <div class="flex justify-between text-sm mb-1">
+                <span>${item.menus?.name || 'Unknown'} x ${item.quantity}</span>
+                <span class="font-bold">${(item.price_at_time * item.quantity).toLocaleString()} MMK</span>
             </div>
         `).join('');
 
         return `
-        <div class="order-card bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm mb-4">
-            <div class="flex justify-between items-center mb-3">
-                <h4 class="font-black text-slate-800">${o.customer_name}</h4>
-                <span class="text-[9px] bg-slate-100 px-2 py-1 rounded-lg text-slate-400 font-bold uppercase tracking-widest">${o.status}</span>
-            </div>
-            <div class="py-3 border-y border-dashed border-slate-100 mb-3">${itemsHtml}</div>
-            <div class="flex justify-between items-center">
-                <p class="text-lg font-black text-orange-600">${o.total_amount.toLocaleString()} Ks</p>
-                <div class="flex gap-2">
-                    ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.id}', 'pending')" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-orange-100">Accept</button>` : ''}
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4 mb-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-black text-lg">${order.customer_name}</h4>
+                    <p class="text-xs text-slate-400">${order.customer_phone}</p>
+                    <div class="mt-2">${trustBadge}</div>
                 </div>
+                <div class="text-right">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Amount</p>
+                    <p class="text-xl font-black text-orange-600">${order.total_amount.toLocaleString()} Ks</p>
+                </div>
+            </div>
+
+            <div class="py-3 border-y border-dashed border-slate-200">
+                ${itemsHtml}
+            </div>
+
+            <div class="flex justify-between items-center text-xs text-slate-500">
+                <p>📅 ${order.pickup_date} | ⏰ ${order.pickup_time}</p>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                ${order.status === 'new' ? `
+                    <button onclick="updateStatus('${order.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-2xl hover:bg-orange-600 transition">Accept Order</button>
+                    <button onclick="updateStatus('${order.id}', 'rejected')" class="px-4 bg-slate-100 text-slate-400 font-bold py-3 rounded-2xl hover:bg-red-50 hover:text-red-500 transition">Reject</button>
+                ` : ''}
+                ${order.status === 'pending' ? `
+                    <button onclick="updateStatus('${order.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl">Mark as Done</button>
+                ` : ''}
             </div>
         </div>`;
     }).join('');
-
-    lucide.createIcons();
 }
 
+// Status ပြောင်းလဲရန် function
+async function updateStatus(orderId, newStatus) {
+    const { error } = await _supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
 
-
-
-async function updateOrderStatus(id, newStatus) {
-    const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
-    if (!error) {
-        renderOrders(currentOrderTab);
-        calcDashboard();
-    }
+    if (error) return alert(error.message);
+    
+    // Status အောင်မြင်စွာ ပြောင်းပြီးပါက UI ကို Refresh လုပ်မည်
+    renderOrders(currentOrderTab); 
 }
 
 // --- ၅။ CUSTOMER LIST & PROFILE ---
