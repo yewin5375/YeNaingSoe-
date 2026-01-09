@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // မင်းရဲ့ တခြား Function တွေ (renderMenuList, etc...) က ဒီအောက်မှာ ဆက်ရှိနေမယ်
 
 
-let currentOrderTab = 'new';
+
 
 // --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
 function switchPage(pageId) {
