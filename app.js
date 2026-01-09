@@ -5,6 +5,59 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // အပေါ်ဆုံးနားမှာ ထည့်ရန်
 const notifSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+
+    // --- ၂။ ငါပေးတဲ့ Function ကို ဒီမှာ ထည့်ပါ ---
+    function listenOrders() {
+        console.log("Realtime စောင့်ကြည့်နေပါပြီ...");
+        _supabase
+            .channel('admin_realtime')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'orders' 
+            }, (payload) => {
+                console.log("အော်ဒါအသစ် ရောက်ပြီ!", payload);
+                
+                // အသံမြည်စေရန်
+                const audio = document.getElementById('order-sound');
+                if(audio) audio.play().catch(err => console.log("Sound Error:", err));
+
+                // Notification Bar မှာ စာပြရန်
+                if (Notification.permission === "granted") {
+                    new Notification("မှာယူမှုအသစ်!", {
+                        body: `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/1532/1532688.png'
+                    });
+                }
+
+                // ခေါင်းလောင်းမှာ ဂဏန်းတိုးရန်
+                const dot = document.getElementById('admin-notif-count');
+                if(dot) {
+                    let current = parseInt(dot.innerText) || 0;
+                    dot.innerText = current + 1;
+                    dot.classList.remove('hidden');
+                }
+
+                // အော်ဒါစာရင်းကိုပါ တန်းပြီး Refresh လုပ်ခိုင်းမယ်
+                if (typeof renderOrders === 'function') renderOrders('new');
+            })
+            .subscribe();
+    }
+
+    // --- ၃။ Function ကို စတင်အလုပ်လုပ်ခိုင်းရန် (အရေးကြီးသည်) ---
+    // ဒါလေးကိုပါ ထည့်မှ Page ဖွင့်တာနဲ့ Realtime စောင့်ကြည့်မှာပါ
+    document.addEventListener('DOMContentLoaded', () => {
+        listenOrders(); 
+        
+        // Browser က Notification ပြခွင့်တောင်းရန်
+        if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    });
+
+    // မင်းရဲ့ တခြား Function တွေ (renderMenuList, etc...) က ဒီအောက်မှာ ဆက်ရှိနေမယ်
+
+
 let currentOrderTab = 'new';
 
 // --- ၁။ စာမျက်နှာ ထိန်းချုပ်မှု ---
@@ -400,31 +453,7 @@ async function calcDashboard() {
         </li>`).join('');
 }
 
-// --- ပေါင်းစပ်ထားတဲ့ အော်ဒါစောင့်ကြည့်ရေးစနစ် ---
-_supabase.channel('admin-orders-channel')
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-    
-    // ၁။ အသံမြည်မယ် (မင်းမှာရှိပြီးသား playSound ကို သုံးမယ်)
-    playSound(); 
 
-    // ၂။ Browser မှာ စာတန်းပြမယ်
-    showPhoneNotification("New Order!", `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`);
-
-    // ၃။ ငါအခုပေးတဲ့ "ခေါင်းလောင်း" UI မှာ ဂဏန်းတိုးမယ်
-    const dot = document.getElementById('admin-notif-count');
-    if (dot) {
-        let count = parseInt(dot.innerText) || 0;
-        count++;
-        dot.innerText = count;
-        dot.classList.remove('hidden');
-    }
-
-    // ၄။ အော်ဒါစာရင်းနဲ့ Dashboard ကို Update လုပ်မယ်
-    if(currentOrderTab === 'new') renderOrders('new');
-    if(typeof calcDashboard === 'function') calcDashboard();
-    
-  })
-  .subscribe();
 
 // Notification Permission Request
 if (Notification.permission === 'default') Notification.requestPermission();
