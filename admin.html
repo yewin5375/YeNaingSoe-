@@ -1,285 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>မြင်သာကြက်ကင် - Admin Panel</title>
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "18bd221d-9271-4a0d-a11d-31ba38c23890",
-    });
-  });
-</script>
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
-    
-    body { 
-      font-family: 'Pyidaungsu', sans-serif; 
-      -webkit-tap-highlight-color: transparent; 
-      overflow-x: hidden; 
-    }
-    .page { display: none; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }
-    .page.visible { display: block; opacity: 1; transform: translateY(0); }
-    
-    .tab-btn.active { 
-      background: #f97316; 
-      color: white; 
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-    }
-    
-    #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; }
-    #sidebar.closed { transform: translateX(-100%); }
-    
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    
-    /* Order Card Animation */
-    .order-card { animation: slideIn 0.3s ease-out; }
-    @keyframes slideIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foodie Admin - Elite Ultra Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; color: #1e293b; }
+        .nav-text { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #94a3b8; cursor: pointer; padding: 10px; }
+        .nav-text.active { color: #F97316; border-bottom: 3px solid #F97316; }
+        .tab-btn { flex: 1; padding: 12px; font-size: 11px; font-weight: 800; border-radius: 12px; transition: 0.3s; color: #64748b; }
+        .tab-btn.active { background: #1e293b; color: white; }
+        .grid-layout { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; border-bottom: 1px solid #f1f5f9; padding: 10px 0; font-size: 11px; font-weight: 700; }
+        #voucher-preview { position: absolute; left: -9999px; top: 0; background: white; width: 300px; padding: 20px; }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="pb-32">
 
-  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-[900] hidden backdrop-blur-sm"></div>
-
-  <header class="bg-white/80 backdrop-blur-md border-b p-4 sticky top-0 z-[500] flex justify-between items-center shadow-sm">
-    <div class="flex items-center gap-3">
-      <button onclick="toggleSidebar()" class="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-        <i data-lucide="menu" class="w-6 h-6"></i>
-      </button>
-      <h1 class="font-black text-lg text-orange-600 tracking-tight" id="page-title">DASHBOARD</h1>
-    </div>
-    
-    <div class="flex items-center gap-2">
-      <div class="relative">
-        <button onclick="toggleNotif()" class="p-2 bg-slate-100 rounded-xl relative">
-          <i data-lucide="bell" class="w-5 h-5 text-slate-600"></i>
-          <span id="notif-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden animate-ping"></span>
-        </button>
-        <div id="notif-dropdown" class="absolute right-0 mt-3 w-80 bg-white shadow-2xl rounded-2xl border hidden p-4 z-[600]">
-          <div class="flex justify-between items-center border-b pb-2 mb-2">
-            <span class="font-bold">Notifications</span>
-            <button onclick="toggleNotif()" class="text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button>
-          </div>
-          <div id="notif-list" class="space-y-2 max-h-80 overflow-y-auto no-scrollbar text-xs">
-            <p class="text-center text-slate-400 py-4">သတိပေးချက်မရှိသေးပါ</p>
-          </div>
+    <header class="bg-white sticky top-0 z-[100] p-5 px-8 flex justify-between items-center border-b border-slate-100 shadow-sm">
+        <h1 class="text-xl font-black italic tracking-tighter">ADMIN.SYSTEM</h1>
+        <div class="flex items-center gap-6">
+            <div class="relative cursor-pointer" onclick="showNotiBox()">
+                <span class="text-2xl">🔔</span>
+                <span id="noti-dot" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] flex items-center justify-center rounded-full border-2 border-white hidden">0</span>
+            </div>
+            <button onclick="fetchData()" class="bg-slate-50 p-2 rounded-xl text-xs font-black">SYNC</button>
         </div>
-      </div>
-    </div>
-  </header>
+    </header>
 
-  <div class="flex">
-    <aside id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white border-r closed shadow-2xl overflow-y-auto">
-      <div class="p-6 border-b flex justify-between items-center bg-orange-600 text-white">
-        <div>
-          <h2 class="font-black text-xl tracking-tighter">မြင်သာကြက်ကင်</h2>
-          <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">Admin Control</p>
-        </div>
-        <button onclick="toggleSidebar()" class="p-2 hover:bg-white/20 rounded-lg"><i data-lucide="chevron-left"></i></button>
-      </div>
-      
-      <nav class="p-4 space-y-1">
-        <button onclick="switchPage('dashboard')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
-          <i data-lucide="layout-dashboard"></i> Dashboard
-        </button>
-        <button onclick="switchPage('orders')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
-          <i data-lucide="shopping-cart"></i> Orders
-        </button>
-        <button onclick="switchPage('menu')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
-          <i data-lucide="utensils"></i> Menu Items
-        </button>
-        <button onclick="switchPage('add-menu')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-orange-600 bg-orange-50/50 hover:bg-orange-100 transition-all">
-          <i data-lucide="plus-circle"></i> Add New Menu
-        </button>
-        <div class="border-t my-4 opacity-50"></div>
-        <button onclick="switchPage('customers')" class="w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-all">
-          <i data-lucide="users"></i> Customer Database
-        </button>
-      </nav>
-    </aside>
-
-    <main class="flex-1 p-4 lg:p-8 max-w-5xl mx-auto w-full">
-      
-      <section id="page-dashboard" class="page visible space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-white p-6 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center">
-            <div class="p-3 bg-blue-50 text-blue-500 rounded-2xl mb-2"><i data-lucide="package"></i></div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Total Orders</p>
-            <h2 id="total-orders" class="text-3xl font-black">0</h2>
-          </div>
-          <div class="bg-white p-6 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center">
-            <div class="p-3 bg-green-50 text-green-500 rounded-2xl mb-2"><i data-lucide="banknote"></i></div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Revenue</p>
-            <h2 id="total-revenue" class="text-2xl font-black text-orange-600">0 Ks</h2>
-          </div>
-        </div>
+    <main class="max-w-4xl mx-auto p-6">
         
-        <div class="bg-white p-6 rounded-[2rem] border shadow-sm">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="font-black text-slate-800">လတ်တလော မှာယူမှုများ</h3>
-            <button onclick="switchPage('orders')" class="text-orange-500 text-xs font-bold">See All</button>
-          </div>
-          <ul id="dash-recent-orders" class="space-y-4"></ul>
-        </div>
-      </section>
-
-      <section id="page-add-menu" class="page">
-        <div class="max-w-xl mx-auto bg-white p-8 rounded-[2.5rem] border shadow-xl shadow-orange-900/5 space-y-6">
-          <div class="flex items-center gap-4">
-            <button onclick="switchPage('menu')" class="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
-              <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </button>
-            <h3 id="form-title" class="font-black text-xl text-slate-800">Add New Item</h3>
-          </div>
-          
-          <form id="menu-form" class="space-y-4">
-            <input type="hidden" id="menu-id">
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold text-slate-400 ml-2">MENU NAME</label>
-              <input type="text" id="menu-name" placeholder="ဥပမာ- ကြက်ကင်တစ်ကောင်" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
+        <section id="tab-dashboard" class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase">Revenue</p>
+                <h2 id="stat-revenue" class="text-2xl font-black text-slate-800">0 Ks</h2>
             </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1">
-                <label class="text-[10px] font-bold text-slate-400 ml-2">PRICE (KS)</label>
-                <input type="number" id="menu-price" placeholder="15000" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
-              </div>
-              <div class="space-y-1">
-                <label class="text-[10px] font-bold text-slate-400 ml-2">STOCK COUNT</label>
-                <input type="number" id="menu-stock" placeholder="50" class="w-full p-4 bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all" required>
-              </div>
+            <div class="bg-orange-500 text-white p-6 rounded-[2.5rem] shadow-lg shadow-orange-100">
+                <p class="text-[10px] font-black opacity-80 uppercase">Total Orders</p>
+                <h2 id="stat-orders" class="text-2xl font-black">0</h2>
             </div>
-
-            <div class="space-y-3 bg-slate-50 p-5 rounded-3xl border border-dashed border-slate-200">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Image Management</p>
-              <input type="file" id="menu-image-file" accept="image/*" class="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer">
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i data-lucide="link" class="w-3 h-3 text-slate-400"></i>
-                </div>
-                <input type="text" id="menu-image-url" placeholder="OR paste image URL here" class="w-full pl-8 p-3 text-xs bg-white rounded-xl outline-none border border-slate-100">
-              </div>
+            <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase">Customers</p>
+                <h2 id="stat-customers" class="text-2xl font-black">0</h2>
             </div>
-
-            <button type="submit" id="save-btn" class="w-full bg-orange-600 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-95 transition-all">
-              SAVE TO DATABASE
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <section id="page-menu" class="page space-y-4">
-        <div class="flex justify-between items-center px-2">
-          <p class="text-xs font-bold text-slate-400 uppercase">Available Menu Items</p>
-          <button onclick="switchPage('add-menu')" class="p-2 bg-orange-500 text-white rounded-full shadow-lg"><i data-lucide="plus"></i></button>
-        </div>
-        <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24"></div>
-      </section>
-
-      <section id="page-orders" class="page">
-        <div class="flex gap-2 mb-6 p-1 bg-slate-200/50 rounded-2xl sticky top-[72px] z-[400] backdrop-blur-md">
-          <button onclick="setOrderStatusTab('new')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="new">NEW</button>
-          <button onclick="setOrderStatusTab('pending')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="pending">PENDING</button>
-          <button onclick="setOrderStatusTab('finished')" class="tab-btn flex-1 py-3 rounded-xl text-xs font-black transition-all" data-status="finished">DONE</button>
-        </div>
-        <div id="order-cards" class="space-y-4 pb-24"></div>
-      </section>
-
-      <section id="page-customers" class="page space-y-6">
-        <div class="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
-          <div class="p-5 border-b flex items-center justify-between bg-slate-50">
-            <h3 class="font-black text-slate-800">Customer Database</h3>
-            <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
-          </div>
-          <ul id="customer-list-items" class="divide-y divide-slate-100 max-h-[40vh] overflow-y-auto no-scrollbar"></ul>
-        </div>
-
-        <div id="customer-detail-section" class="bg-white p-8 rounded-[2.5rem] border shadow-2xl hidden space-y-6 relative overflow-hidden">
-          <div class="absolute top-0 right-0 p-4">
-             <button onclick="hideCustomerDetail()" class="p-2 bg-slate-50 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
-          </div>
-          
-          <div id="customer-profile-info"></div>
-          
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-orange-50 p-6 rounded-3xl border border-orange-100">
-              <p class="text-[10px] font-bold text-orange-400 uppercase mb-1">Total Spent</p>
-              <h4 id="cust-total-amount" class="text-xl font-black text-orange-600">0 Ks</h4>
+            <div class="bg-red-50 p-6 rounded-[2.5rem] border border-red-100 shadow-sm">
+                <p class="text-[10px] font-black text-red-400 uppercase">Stock Alert</p>
+                <h2 id="stat-stock" class="text-2xl font-black text-red-600">0</h2>
             </div>
-            <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100">
-              <p class="text-[10px] font-bold text-blue-400 uppercase mb-1">Orders</p>
-              <h4 id="cust-total-orders" class="text-xl font-black text-blue-600">0</h4>
+        </section>
+
+        <section id="tab-orders" class="hidden space-y-6">
+            <div class="flex bg-slate-200/50 p-1.5 rounded-2xl gap-2">
+                <button onclick="filterOrdersBy('not_confirm')" class="status-tab tab-btn active" id="btn-not_confirm">NEW</button>
+                <button onclick="filterOrdersBy('pending')" class="status-tab tab-btn" id="btn-pending">PENDING</button>
+                <button onclick="filterOrdersBy('ready')" class="status-tab tab-btn" id="btn-ready">READY</button>
             </div>
-          </div>
-          
-          <div class="space-y-4">
-            <h5 class="font-black text-sm text-slate-800 flex items-center gap-2">
-              <i data-lucide="history" class="w-4 h-4"></i> Order History
-            </h5>
-            <div id="customer-order-history" class="space-y-3"></div>
-          </div>
-        </div>
-      </section>
+            <input type="text" id="order-search" oninput="renderOrders()" placeholder="Search Phone, Name or Order ID..." class="w-full p-5 rounded-[1.5rem] bg-white border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-orange-500 font-bold shadow-sm">
+            <div id="order-list" class="space-y-4"></div>
+        </section>
+
+        <section id="tab-menu" class="hidden space-y-6">
+            <button onclick="openMenuModal()" class="w-full bg-slate-900 text-white py-5 rounded-[1.5rem] font-black text-sm shadow-xl">+ NEW ITEM</button>
+            <div id="admin-menu-list" class="grid grid-cols-1 gap-3"></div>
+        </section>
+
+        <section id="tab-customers" class="hidden space-y-6">
+            <input type="text" id="cust-search" oninput="renderCustomers()" placeholder="Search Customers..." class="w-full p-5 rounded-[1.5rem] bg-white border-none ring-1 ring-slate-100 font-bold shadow-sm">
+            <div id="admin-customer-list" class="space-y-3"></div>
+        </section>
     </main>
-  </div>
 
-  <audio id="order-sound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
-
-  <script src="app.js"></script>
-  
-  <script>
-    lucide.createIcons();
-
-    function toggleSidebar() {
-      const sb = document.getElementById('sidebar');
-      const ov = document.getElementById('sidebar-overlay');
-      sb.classList.toggle('closed');
-      ov.classList.toggle('hidden');
-    }
-
-    function toggleNotif() {
-      document.getElementById('notif-dropdown').classList.toggle('hidden');
-      document.getElementById('notif-dot').classList.add('hidden');
-    }
-
-    function hideCustomerDetail() {
-      document.getElementById('customer-detail-section').classList.add('hidden');
-    }
-
-    // Notification Helper
-    function addNotification(msg, type) {
-      const list = document.getElementById('notif-list');
-      const dot = document.getElementById('notif-dot');
-      dot.classList.remove('hidden');
-      
-      const item = document.createElement('div');
-      item.className = `p-3 mb-2 rounded-2xl border ${type === 'order' ? 'bg-orange-50 border-orange-100' : 'bg-red-50 border-red-100'}`;
-      item.innerHTML = `
-        <div class="flex gap-3">
-          <div class="mt-1">${type === 'order' ? '🆕' : '⚠️'}</div>
-          <div>
-            <p class="font-bold">${type === 'order' ? 'Order အသစ်ရောက်ပါပြီ' : 'Stock သတိပေးချက်'}</p>
-            <p class="opacity-70">${msg}</p>
-          </div>
+    <div id="menu-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 space-y-4">
+            <h3 id="modal-title" class="text-xl font-black">Item Detail</h3>
+            <input type="text" id="m-name" placeholder="Item Name" class="w-full p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold">
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" id="m-price" placeholder="Price" class="p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold">
+                <input type="number" id="m-stock" placeholder="Stock" class="p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold">
+            </div>
+            <div class="space-y-2">
+                <input type="text" id="m-image-url" placeholder="Image URL" class="w-full p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold text-xs">
+                <label class="block w-full bg-blue-50 text-blue-600 p-4 rounded-xl text-center text-[10px] font-black cursor-pointer uppercase border border-blue-100">
+                    Upload from phone
+                    <input type="file" id="m-file" accept="image/*" class="hidden" onchange="handleFileUpload(this)">
+                </label>
+                <img id="img-preview" src="" class="w-20 h-20 object-cover rounded-xl mt-2 hidden border">
+            </div>
+            <div class="flex gap-2 pt-4">
+                <button onclick="closeMenuModal()" class="flex-1 py-4 font-black text-slate-400">Cancel</button>
+                <button onclick="saveMenu()" id="save-btn" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-black">Save Now</button>
+            </div>
         </div>
-      `;
-      if(list.querySelector('p')) list.innerHTML = '';
-      list.prepend(item);
-    }
-  </script>
-</body>
-  </html>
+    </div>
 
+    <div id="voucher-preview"></div>
+
+    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-slate-100 flex items-center justify-around px-4 z-[90]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-text active uppercase">Dashboard</button>
+        <button onclick="switchTab('orders')" id="nav-orders" class="nav-text uppercase">Orders</button>
+        <button onclick="switchTab('menu')" id="nav-menu" class="nav-text uppercase">Menu</button>
+        <button onclick="switchTab('customers')" id="nav-customers" class="nav-text uppercase">Customers</button>
+    </nav>
+
+    <script>
+        const SUPABASE_URL = 'https://rvqkolgbykgsqjupmedf.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cWtvbGdieWtnc3FqdXBtZWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDcyNTAsImV4cCI6MjA4MzI4MzI1MH0.fqxJ9aHAHmySpmTaJ-tpfeEsE7IFBr-JkYIdAQCLjQs'; 
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let orders = [], menus = [], customers = [], currentFilter = 'not_confirm', uploadedBase64 = "", editingId = null;
+        let newOrdersCount = 0;
+
+        async function fetchData() {
+            const { data: o } = await _supabase.from('orders').select('*, order_items(*, menus(*))').order('created_at', { ascending: false });
+            const { data: m } = await _supabase.from('menus').select('*').order('name');
+            orders = o || [];
+            menus = m || [];
+            
+            // Generate Customers Data
+            const map = new Map();
+            customers = [];
+            orders.forEach(ord => {
+                if(!map.has(ord.customer_phone)) {
+                    map.set(ord.customer_phone, true);
+                    customers.push({ name: ord.customer_name, phone: ord.customer_phone });
+                }
+            });
+
+            newOrdersCount = orders.filter(x => x.status === 'not_confirm').length;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('stat-revenue').innerText = orders.reduce((s, o) => s + o.total_amount, 0).toLocaleString() + " Ks";
+            document.getElementById('stat-orders').innerText = orders.length;
+            document.getElementById('stat-customers').innerText = customers.length;
+            document.getElementById('stat-stock').innerText = menus.filter(m => m.stock < 5).length;
+            
+            const dot = document.getElementById('noti-dot');
+            if(newOrdersCount > 0) {
+                dot.innerText = newOrdersCount;
+                dot.classList.remove('hidden');
+            } else { dot.classList.add('hidden'); }
+
+            renderOrders();
+            renderMenus();
+            renderCustomers();
+        }
+
+        function renderOrders() {
+            const search = document.getElementById('order-search').value.toLowerCase();
+            const filtered = orders.filter(o => o.status === currentFilter && (o.customer_phone.includes(search) || o.customer_name.toLowerCase().includes(search) || o.id.toString().includes(search)));
+            
+            document.getElementById('order-list').innerHTML = filtered.map(o => `
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-[9px] font-black text-orange-500 mb-1 uppercase tracking-tighter">Order ID: #${o.id.toString().slice(-6)}</p>
+                            <h4 class="font-black text-lg text-slate-800 underline cursor-pointer" onclick="showCustHistory('${o.customer_phone}')">${o.customer_name}</h4>
+                            <p class="text-xs font-bold text-slate-400">Phone: ${o.customer_phone}</p>
+                        </div>
+                        <button onclick="printVoucher('${o.id}')" class="bg-slate-50 p-3 rounded-2xl text-[10px] font-black">VOUCHER</button>
+                    </div>
+                    <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                        <div class="grid-layout text-[9px] text-slate-400 uppercase font-black border-b border-slate-200 pb-2 mb-2">
+                            <span>Name</span><span>Price</span><span>Qty</span><span>Total</span>
+                        </div>
+                        ${o.order_items.map(i => `
+                            <div class="grid-layout">
+                                <span class="truncate pr-2">${i.menus?.name || 'Item'}</span>
+                                <span>${i.price_at_time.toLocaleString()}</span>
+                                <span class="text-center">${i.quantity}</span>
+                                <span class="text-right text-orange-600 font-black">${(i.price_at_time * i.quantity).toLocaleString()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="flex justify-between items-center mt-5">
+                        <p class="font-black text-xl">${o.total_amount.toLocaleString()} Ks</p>
+                        <div class="flex gap-2">
+                            ${currentFilter !== 'pending' ? `<button onclick="updateStatus('${o.id}', 'pending')" class="bg-slate-100 px-4 py-2 rounded-xl text-[9px] font-black uppercase">PENDING</button>` : ''}
+                            ${currentFilter !== 'ready' ? `<button onclick="updateStatus('${o.id}', 'ready')" class="bg-green-500 text-white px-4 py-2 rounded-xl text-[9px] font-black shadow-lg shadow-green-100 uppercase">READY</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterOrdersBy(s) {
+            currentFilter = s;
+            document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + s).classList.add('active');
+            renderOrders();
+        }
+
+        function showNotiBox() {
+            Swal.fire({
+                title: 'Notifications',
+                html: `<div class="text-left p-2">
+                        <p class="font-bold text-orange-600 text-sm mb-2">New Orders Alert!</p>
+                        <p class="text-slate-500 text-xs">You have <b>${newOrdersCount}</b> new orders waiting to be confirmed.</p>
+                        <hr class="my-4">
+                        <p class="text-[10px] text-slate-400">Click on 'Orders' tab and select 'NEW' to process them.</p>
+                       </div>`,
+                confirmButtonText: 'View Now',
+                confirmButtonColor: '#F97316',
+                customClass: { popup: 'rounded-[2rem]' }
+            }).then((res) => { if(res.isConfirmed) switchTab('orders'); });
+        }
+
+        function showCustHistory(phone) {
+            const h = orders.filter(o => o.customer_phone === phone);
+            const user = customers.find(c => c.phone === phone);
+            const html = h.map(o => `
+                <div class="bg-slate-50 p-4 rounded-2xl mb-3 text-left border border-slate-100">
+                    <div class="flex justify-between font-black text-[10px] border-b border-slate-200 pb-2 mb-2 uppercase">
+                        <span>${new Date(o.created_at).toLocaleDateString()}</span>
+                        <span class="text-orange-600">${o.total_amount.toLocaleString()} Ks</span>
+                    </div>
+                    <div class="space-y-1">
+                        ${o.order_items.map(i => `
+                            <div class="flex justify-between text-[9px] font-bold">
+                                <span>${i.menus?.name} (${i.quantity} x ${i.price_at_time})</span>
+                                <span>${(i.quantity * i.price_at_time).toLocaleString()} Ks</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <p class="text-[8px] mt-2 font-black text-slate-400 uppercase">Status: ${o.status}</p>
+                </div>
+            `).join('');
+            
+            Swal.fire({
+                title: user.name,
+                html: `<p class="text-xs font-bold text-slate-400 mb-4">${user.phone}</p><div class="max-h-96 overflow-y-auto">${html || 'No orders yet.'}</div>`,
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-[2.5rem]' }
+            });
+        }
+
+        // IMAGE HANDLER
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedBase64 = e.target.result;
+                    const preview = document.getElementById('img-preview');
+                    preview.src = e.target.result; preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function saveMenu() {
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true; btn.innerText = "Saving...";
+            const img = uploadedBase64 || document.getElementById('m-image-url').value || "https://placehold.co/400x400?text=Food";
+            
+            const obj = {
+                name: document.getElementById('m-name').value,
+                price: parseInt(document.getElementById('m-price').value),
+                stock: parseInt(document.getElementById('m-stock').value),
+                image_url: img
+            };
+
+            if(editingId) await _supabase.from('menus').update(obj).eq('id', editingId);
+            else await _supabase.from('menus').insert([obj]);
+
+            closeMenuModal(); fetchData(); btn.disabled = false; btn.innerText = "Save Now";
+        }
+
+        function renderMenus() {
+            document.getElementById('admin-menu-list').innerHTML = menus.map(m => `
+                <div class="bg-white p-4 rounded-3xl flex items-center justify-between border border-slate-100 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <img src="${m.image_url}" class="w-14 h-14 object-cover rounded-2xl border border-slate-50">
+                        <div>
+                            <p class="font-black text-sm text-slate-800">${m.name}</p>
+                            <p class="text-[10px] font-bold text-orange-500 uppercase">${m.price.toLocaleString()} Ks | Stock: ${m.stock}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openMenuModal('${m.id}')" class="p-3 bg-slate-50 rounded-xl text-blue-500 text-[10px] font-black uppercase">Edit</button>
+                        <button onclick="deleteMenu('${m.id}')" class="p-3 bg-red-50 rounded-xl text-red-400 text-[10px] font-black uppercase">Del</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderCustomers() {
+            const search = document.getElementById('cust-search').value.toLowerCase();
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(search) || c.phone.includes(search));
+            document.getElementById('admin-customer-list').innerHTML = filtered.map(c => `
+                <div onclick="showCustHistory('${c.phone}')" class="bg-white p-5 rounded-[2rem] flex justify-between items-center border border-slate-100 cursor-pointer shadow-sm">
+                    <div><p class="font-black text-sm">${c.name}</p><p class="text-xs text-slate-400 font-bold">${c.phone}</p></div>
+                    <span class="text-orange-500 font-black text-[10px] uppercase">Profile →</span>
+                </div>
+            `).join('');
+        }
+
+        function printVoucher(id) {
+            const o = orders.find(x => x.id === id);
+            const container = document.getElementById('voucher-preview');
+            container.innerHTML = `
+                <div style="font-family: Arial, sans-serif; color: #000; padding: 20px; width: 280px; background: #fff;">
+                    <h2 style="text-align: center; margin-bottom: 2px;">FOODIE.</h2>
+                    <p style="text-align: center; font-size: 10px; margin-bottom: 15px;">Official Receipt</p>
+                    <div style="font-size: 11px; margin-bottom: 10px;">
+                        <p>Order: #${o.id.toString().slice(-6)}</p>
+                        <p>Cust: ${o.customer_name}</p>
+                        <p>Phone: ${o.customer_phone}</p>
+                        <p>Date: ${new Date(o.created_at).toLocaleString()}</p>
+                    </div>
+                    <table style="width: 100%; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 11px; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px dashed #ccc;"><th style="text-align: left; padding: 5px 0;">Item</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Total</th></tr>
+                        ${o.order_items.map(i => `<tr><td style="padding: 5px 0;">${i.menus?.name}</td><td style="text-align: center;">${i.quantity}</td><td style="text-align: right;">${(i.price_at_time * i.quantity).toLocaleString()}</td></tr>`).join('')}
+                    </table>
+                    <div style="text-align: right; margin-top: 15px; font-size: 14px;"><b>TOTAL: ${o.total_amount.toLocaleString()} Ks</b></div>
+                    <p style="text-align: center; font-size: 10px; margin-top: 25px;">-- THANK YOU --</p>
+                </div>
+            `;
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Voucher_${o.customer_name}.png`; link.href = canvas.toDataURL(); link.click();
+            });
+        }
+
+        // TAB SYSTEM
+        function switchTab(t) {
+            ['dashboard', 'orders', 'menu', 'customers'].forEach(id => {
+                document.getElementById('tab-' + id).classList.add('hidden');
+                document.getElementById('nav-' + id).classList.remove('active');
+            });
+            document.getElementById('tab-' + t).classList.remove('hidden');
+            document.getElementById('nav-' + t).classList.add('active');
+        }
+
+        // REAL-TIME
+        _supabase.channel('orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+            fetchData();
+        }).subscribe();
+
+        function openMenuModal(id = null) {
+            editingId = id; uploadedBase64 = ""; document.getElementById('img-preview').classList.add('hidden');
+            if(id) {
+                const m = menus.find(x => x.id === id);
+                document.getElementById('m-name').value = m.name; document.getElementById('m-price').value = m.price;
+                document.getElementById('m-stock').value = m.stock; document.getElementById('m-image-url').value = m.image_url;
+            } else { ['m-name', 'm-price', 'm-stock', 'm-image-url'].forEach(i => document.getElementById(i).value = ''); }
+            document.getElementById('menu-modal').classList.remove('hidden');
+        }
+
+        function closeMenuModal() { document.getElementById('menu-modal').classList.add('hidden'); }
+        async function deleteMenu(id) { if(confirm('Delete?')) { await _supabase.from('menus').delete().eq('id', id); fetchData(); } }
+        async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); fetchData(); }
+        
+        fetchData();
+    </script>
+</body>
+</html>
