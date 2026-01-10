@@ -289,37 +289,52 @@ async function renderOrders(statusTab) {
         `).join('');
 
         return `
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4 mb-4">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h4 class="font-black text-lg">${order.customer_name}</h4>
-                    <p class="text-xs text-slate-400">${order.customer_phone}</p>
-                    <div class="mt-2">${trustBadge}</div>
+    <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4 mb-4">
+        <div class="flex justify-between items-start">
+            <div>
+                <h4 class="font-black text-lg text-slate-800">
+                    <span class="text-orange-600">#${order.id.split('-')[0]}</span> - ${order.customer_name}
+                </h4>
+                <p class="text-xs text-slate-400 font-bold">${order.customer_phone}</p>
+                <div class="mt-2">${trustBadge}</div>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Amount</p>
+                <p class="text-xl font-black text-orange-600">${order.total_amount.toLocaleString()} Ks</p>
+            </div>
+        </div>
+
+        <div class="py-3 border-y border-dashed border-slate-200">
+            <div class="grid grid-cols-4 text-[10px] font-bold text-slate-400 uppercase mb-2">
+                <span>Name</span>
+                <span class="text-center">Price</span>
+                <span class="text-center">Qty</span>
+                <span class="text-right">Total</span>
+            </div>
+            ${order.order_items.map(item => `
+                <div class="grid grid-cols-4 text-xs font-bold py-1 border-b border-slate-50 last:border-none">
+                    <span class="text-slate-700 truncate">${item.menus?.name || 'ဟင်းပွဲ'}</span>
+                    <span class="text-center text-slate-500">${item.price_at_time}</span>
+                    <span class="text-center text-orange-600">x${item.quantity}</span>
+                    <span class="text-right text-slate-800">${(item.price_at_time * item.quantity).toLocaleString()}</span>
                 </div>
-                <div class="text-right">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Amount</p>
-                    <p class="text-xl font-black text-orange-600">${order.total_amount.toLocaleString()} Ks</p>
-                </div>
-            </div>
+            `).join('')}
+        </div>
 
-            <div class="py-3 border-y border-dashed border-slate-200">
-                ${itemsHtml}
-            </div>
+        <div class="flex justify-between items-center text-[11px] font-medium text-slate-500">
+            <p>📅 ${order.pickup_date} | ⏰ ${order.pickup_time}</p>
+        </div>
 
-            <div class="flex justify-between items-center text-xs text-slate-500">
-                <p>📅 ${order.pickup_date} | ⏰ ${order.pickup_time}</p>
-            </div>
-
-            <div class="flex gap-2 pt-2">
-                ${order.status === 'new' ? `
-                    <button onclick="updateStatus('${order.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-2xl hover:bg-orange-600 transition">Accept Order</button>
-                    <button onclick="updateStatus('${order.id}', 'rejected')" class="px-4 bg-slate-100 text-slate-400 font-bold py-3 rounded-2xl hover:bg-red-50 hover:text-red-500 transition">Reject</button>
-                ` : ''}
-                ${order.status === 'pending' ? `
-                    <button onclick="updateStatus('${order.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl">Mark as Done</button>
-                ` : ''}
-            </div>
-        </div>`;
+        <div class="flex gap-2 pt-2">
+            ${order.status === 'new' ? `
+                <button onclick="updateStatus('${order.id}', 'pending')" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-2xl hover:bg-orange-600 transition shadow-lg shadow-orange-100">Accept Order</button>
+                <button onclick="updateStatus('${order.id}', 'rejected')" class="px-4 bg-slate-100 text-slate-400 font-bold py-3 rounded-2xl hover:bg-red-50 hover:text-red-500 transition">Reject</button>
+            ` : ''}
+            ${order.status === 'pending' ? `
+                <button onclick="updateStatus('${order.id}', 'finished')" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-2xl shadow-lg shadow-green-100">Mark as Done</button>
+            ` : ''}
+        </div>
+    </div>`;
     }).join('');
 }
 
