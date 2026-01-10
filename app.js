@@ -6,8 +6,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // --- ၁။ CONFIGURATION ---
 
 let currentOrderTab = 'new';
-
-// --- ၂။ REALTIME LISTENER ---
+// --- ၁။ REALTIME LISTENER (အသံနဲ့ ဖုန်း Notification ပါဝင်သည်) ---
 function listenOrders() {
     console.log("Realtime စနစ် စတင်နေပြီ...");
     
@@ -23,15 +22,12 @@ function listenOrders() {
             // ၁။ အသံမြည်ရန်
             const audio = document.getElementById('order-sound');
             if(audio) {
-                audio.play().catch(err => console.log("Sound Error:", err));
+                audio.muted = false; // Mute ဖြစ်နေရင် ဖွင့်မယ်
+                audio.play().catch(err => console.log("အသံဖွင့်ရန် User Interaction လိုအပ်ပါသည်:", err));
             }
 
-            // ၂။ HTML ထဲက Notification List ထဲ စာထည့်ရန်
-            const customerName = payload.new.customer_name;
-            const message = `${customerName} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
-            addNotification(message, 'order');
-
-            // ၃။ ဖုန်း Notification Bar မှာ စာပြရန်
+            // ၂။ ဖုန်း Notification Bar မှာ ပြရန်
+            const message = `${payload.new.customer_name} ထံမှ အော်ဒါအသစ် ရောက်ရှိလာပါသည်`;
             if (Notification.permission === "granted") {
                 new Notification("မှာယူမှုအသစ်!", {
                     body: message,
@@ -39,31 +35,29 @@ function listenOrders() {
                 });
             }
 
-              // ၄။ UI Refresh လုပ်ရန်
+            // ၃။ ခေါင်းလောင်းထဲ စာထည့်ရန်
+            addNotification(message, 'order');
+
+            // ၄။ UI Refresh
+            calcDashboard();
             if (typeof renderOrders === 'function') renderOrders(currentOrderTab);
         })
-        .subscribe((status) => {
-            console.log("Connection Status:", status);
-            
-            // CHANNEL_ERROR ဖြစ်ရင် ၅ စက္ကန့်နေရင် ပြန်ချိတ်ခိုင်းမယ်
-            if (status === 'CHANNEL_ERROR') {
-                console.log("ချိတ်ဆက်မှု ပြတ်တောက်သွားသဖြင့် ၅ စက္ကန့်အကြာတွင် ပြန်ချိတ်ပါမည်...");
-                setTimeout(() => {
-                    listenOrders();
-                }, 5000);
-            }
-        });
+        .subscribe();
 }
 
-// --- ၃။ NOTIFICATION HELPER (HTML ထဲက Function ကို ပြန်ပြင်ထားသည်) ---
+// --- ၂။ NOTIFICATION HELPER (နှိပ်လိုက်ရင် Order Page ရောက်အောင် ပြင်ထားသည်) ---
 function addNotification(msg, type) {
     const list = document.getElementById('notif-list');
     const dot = document.getElementById('notif-dot');
-    
-    // အနီစက်လေး ပြရန်
     if(dot) dot.classList.remove('hidden');
     
     const item = document.createElement('div');
+    // onclick ထည့်လိုက်တယ် - နှိပ်လိုက်ရင် Order Page ကို သွားမယ်
+    item.onclick = () => {
+        switchPage('orders');
+        document.getElementById('notif-dropdown').classList.add('hidden'); // Menu ပြန်ပိတ်မယ်
+    };
+
     item.className = `p-3 mb-2 rounded-2xl border transition-all hover:bg-white cursor-pointer ${type === 'order' ? 'bg-orange-50 border-orange-100' : 'bg-red-50 border-red-100'}`;
     
     const now = new Date();
@@ -79,24 +73,9 @@ function addNotification(msg, type) {
         </div>
       </div>
     `;
-
-    // "သတိပေးချက်မရှိသေးပါ" ဆိုတဲ့ စာသားရှိရင် ဖျက်မယ်
-    if(list.querySelector('p.text-center')) list.innerHTML = '';
-    
-    // စာရင်းအသစ်ကို အပေါ်ဆုံးက ထည့်မယ်
-    list.prepend(item);
+    if(list && list.querySelector('p.text-center')) list.innerHTML = '';
+    if(list) list.prepend(item);
 }
-
-// --- ၄။ PAGE STARTUP ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Realtime စတင်ခြင်း
-    listenOrders();
-    
-    // Notification Permission တောင်းခြင်း
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
-});
 
 // မင်းရဲ့ တခြား function တွေ (switchPage, renderOrders, etc.) ကို ဒီအောက်မှာ ဆက်ထည့်ပါ...
 
@@ -495,17 +474,24 @@ async function downloadVoucher(id) {
 
 // --- ၇။ DASHBOARD & REAL-TIME ---
 async function calcDashboard() {
-    const { data: orders } = await _supabase.from('orders').select('*');
-    if(!orders) return;
-    document.getElementById('total-orders').innerText = orders.length;
-    document.getElementById('total-revenue').innerText = orders.reduce((s,o) => s + o.total_amount, 0).toLocaleString() + " Ks";
-    
-    const { data: recent } = await _supabase.from('orders').select('*').order('created_at', {ascending: false}).limit(5);
-    document.getElementById('dash-recent-orders').innerHTML = recent.map(o => `
-        <li onclick="viewCustomerDetail('${o.customer_phone}')" class="flex justify-between items-center bg-white p-3 rounded-2xl border mb-2 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
-            <span class="font-bold text-xs">${o.customer_name}</span>
-            <span class="text-orange-500 font-black text-xs">${o.total_amount.toLocaleString()} Ks</span>
-        </li>`).join('');
+    const { data: orders, error } = await _supabase.from('orders').select('*');
+    if(error) return console.error(error);
+
+    if(orders) {
+        document.getElementById('total-orders').innerText = orders.length;
+        const revenue = orders.reduce((s, o) => s + (o.total_amount || 0), 0);
+        document.getElementById('total-revenue').innerText = revenue.toLocaleString() + " Ks";
+        
+        const { data: recent } = await _supabase.from('orders').select('*').order('created_at', {ascending: false}).limit(5);
+        const recentList = document.getElementById('dash-recent-orders');
+        if(recentList && recent) {
+            recentList.innerHTML = recent.map(o => `
+                <li onclick="viewCustomerDetail('${o.customer_phone}')" class="flex justify-between items-center bg-white p-3 rounded-2xl border mb-2 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                    <span class="font-bold text-xs">#${o.id.split('-')[0]} - ${o.customer_name}</span>
+                    <span class="text-orange-500 font-black text-xs">${(o.total_amount || 0).toLocaleString()} Ks</span>
+                </li>`).join('');
+        }
+    }
 }
 
 
@@ -514,19 +500,18 @@ async function calcDashboard() {
 if (Notification.permission === 'default') Notification.requestPermission();
 
 // INIT
-window.onload = () => {
-    const lastPage = localStorage.getItem('lastPage') || 'dashboard';
+// --- ရှာရန်- window.onload = () => { ... ---
+window.onload = async () => {
+    // ၁။ Realtime ကို စတင်ချိတ်ဆက်မယ်
+    listenOrders();
     
-    // အခြေခံ အချက်အလက်များ အရင်တွက်မည်
-    calcDashboard();
-    
-    // လက်ရှိ Page ကို ဖွင့်မည်
-    switchPage(lastPage);
+    // ၂။ Dashboard data များကို ချက်ချင်းတွက်ချက်မယ် (ဒါမှ 0 တွေ မပြမှာ)
+    await calcDashboard();
 
-    // အကယ်၍ Order Page ရောက်နေရင် data ဆွဲထုတ်ရန် ခေါ်လိုက်ခြင်း
-    if (lastPage === 'orders') {
-        setOrderStatusTab(currentOrderTab); 
-    }
+    // ၃။ အရင်ဖွင့်ထားတဲ့ Page ကို ပြန်ဖွင့်မယ်
+    const lastPage = localStorage.getItem('lastPage') || 'dashboard';
+    switchPage(lastPage);
 };
+
 
         
