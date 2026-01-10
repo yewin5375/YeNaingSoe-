@@ -85,8 +85,8 @@
             </div>
 
             <form id="order-form" class="space-y-3 bg-slate-50 p-4 rounded-3xl overflow-y-auto flex-1">
-                <input type="text" id="cust-name" placeholder="သင့်နာမည်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
-                <input type="tel" id="cust-phone" placeholder="ဖုန်းနံပါတ်" required class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
+                <input type="text" id="cust-name" placeholder="သင့်နာမည်" required autocomplete="off" class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
+                <input type="tel" id="cust-phone" placeholder="ဖုန်းနံပါတ်" required autocomplete="off" class="w-full border-none ring-1 ring-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition text-sm">
                 
                 <div class="flex gap-2">
                     <div class="w-1/2">
@@ -202,45 +202,56 @@
             updateCartUI();
         };
 
-        function updateCartUI() {
-            const cartItems = document.getElementById('cart-items');
-            const cartCount = document.getElementById('cart-count');
-            const cartTotal = document.getElementById('cart-total');
+        // ၁။ ဒီ function တစ်ခုလုံးကို အဟောင်းနေရာမှာ အစားထိုးပါ
+function updateCartUI() {
+    const cartItems = document.getElementById('cart-items');
+    const cartCount = document.getElementById('cart-count');
+    const cartTotal = document.getElementById('cart-total');
 
-            cartCount.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
-            
-            if (cart.length === 0) {
-                cartItems.innerHTML = `<p class="text-center text-slate-400 py-10 italic">ခြင်းတောင်းထဲမှာ ဘာမှမရှိသေးပါ။</p>`;
-                cartTotal.innerText = "0";
-                return;
-            }
+    cartCount.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = `<p class="text-center text-slate-400 py-10 italic">ခြင်းတောင်းထဲမှာ ဘာမှမရှိသေးပါ။</p>`;
+        cartTotal.innerText = "0";
+        return;
+    }
 
-            let total = 0;
-            cartItems.innerHTML = cart.map((item, index) => {
-                total += item.price * item.qty;
-                return `
-                    <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <div>
-                            <p class="font-bold text-slate-800">${item.name}</p>
-                            <p class="text-xs text-slate-500 mt-1">
-                                <button onclick="changeQty(${index}, -1)" class="px-2 bg-white rounded border">-</button>
-                                <span class="mx-2 font-bold">${item.qty}</span>
-                                <button onclick="changeQty(${index}, 1)" class="px-2 bg-white rounded border">+</button>
-                                <span class="ml-4 font-semibold text-orange-600">${(item.price * item.qty).toLocaleString()} MMK</span>
-                            </p>
-                        </div>
-                        <button onclick="removeFromCart(${index})" class="text-red-400 hover:text-red-600 p-2">&times;</button>
+    let total = 0;
+    cartItems.innerHTML = cart.map((item, index) => {
+        total += item.price * item.qty;
+        return `
+            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-2">
+                <div class="flex-1">
+                    <p class="font-bold text-slate-800">${item.name}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <button onclick="changeQty(${index}, -1)" class="w-8 h-8 bg-white rounded-lg border font-bold shadow-sm">-</button>
+                        
+                        <input type="number" 
+                               value="${item.qty}" 
+                               onchange="directChangeQty(${index}, this.value)"
+                               class="w-12 h-8 text-center bg-white border rounded-lg font-bold text-orange-600 outline-none focus:ring-2 focus:ring-orange-500"
+                               min="1">
+                        
+                        <button onclick="changeQty(${index}, 1)" class="w-8 h-8 bg-white rounded-lg border font-bold shadow-sm">+</button>
+                        
+                        <span class="ml-4 font-black text-slate-700 text-sm">${(item.price * item.qty).toLocaleString()} Ks</span>
                     </div>
-                `;
-            }).join('');
-            cartTotal.innerText = total.toLocaleString();
-        }
+                </div>
+                <button onclick="removeFromCart(${index})" class="text-red-400 hover:text-red-600 p-2 text-2xl">&times;</button>
+            </div>
+        `;
+    }).join('');
+    cartTotal.innerText = total.toLocaleString();
+}
 
-        window.changeQty = (index, amount) => {
-            cart[index].qty += amount;
-            if (cart[index].qty <= 0) cart.splice(index, 1);
-            updateCartUI();
-        }
+// ၂။ ဒါလေးကို updateCartUI ရဲ့ အောက်နားလေးမှာ ကပ်ထည့်လိုက်ပါ
+window.directChangeQty = (index, value) => {
+    let newQty = parseInt(value);
+    if (isNaN(newQty) || newQty < 1) newQty = 1;
+    cart[index].qty = newQty;
+    updateCartUI();
+};
+        
 
         window.removeFromCart = (index) => {
             cart.splice(index, 1);
@@ -248,10 +259,16 @@
         }
 
         window.toggleCart = () => {
-            const modal = document.getElementById('cart-modal');
-            modal.classList.toggle('hidden');
-        };
-         function toggleCartHeight(expand) {
+    const modal = document.getElementById('cart-modal');
+    modal.classList.toggle('hidden');
+    
+    // Modal ပိတ်ရင် ခြင်းတောင်းကိုပါ ပြန်ကျုံ့ခိုင်းမယ်
+    if (modal.classList.contains('hidden')) {
+        toggleCartHeight(false);
+    }
+};
+
+function toggleCartHeight(expand) {
     const cartBox = document.getElementById('cart-items');
     const overlay = document.getElementById('cart-height-overlay');
     const hint = document.getElementById('expand-hint');
@@ -259,13 +276,14 @@
     if (expand) {
         cartBox.classList.add('expanded');
         overlay.classList.add('show');
-        if(hint) hint.style.display = 'none'; // ကြီးသွားရင် hint ဖျောက်မယ်
+        if(hint) hint.classList.add('hidden'); 
     } else {
         cartBox.classList.remove('expanded');
         overlay.classList.remove('show');
-        if(hint) hint.style.display = 'block'; // သေးသွားရင် hint ပြန်ပြမယ်
+        if(hint) hint.classList.remove('hidden');
     }
-         }
+}
+        
         
         // --- Submit Order ---
                 // --- Submit Order (Updated for New SQL) ---
