@@ -332,35 +332,45 @@
             if (itemsErr) {
                 console.error("Items Insert Error:", itemsErr);
             }
-             // --- Telegram ပို့ရန် ဒီနေရာမှာ ထည့်ပါ ---
-const token = "8215695761:AAF1qDjAJn7gjiHyzf8t7W6c8e51cim98sU";
-const chatId = "8116152317";
+             // --- Telegram ပို့ရန် ဒီနေရာမှာ အတိအကျ ထည့်ပါ ---
+try {
+    const telegramToken = "8215695761:AAF1qDjAJn7gjiHyzf8t7W6c8e51cim98sU";
+    const telegramChatId = "8116152317";
 
-// ပစ္စည်းစာရင်းကို တစ်ကြောင်းချင်းစီ စီမည့်အပိုင်း
-let itemDetails = "";
-cart.forEach((item) => {
-    itemDetails += `${item.name} - ${item.price}ks x ${item.qty} = ${item.price * item.qty}ks\n`;
-});
+    // ပစ္စည်းစာရင်းကို တစ်ကြောင်းချင်းစီ စီမည့်အပိုင်း
+    let itemDetails = "";
+    cart.forEach((item) => {
+        // မင်း code ထဲမှာ item.qty လို့ သုံးထားတာမို့ qty နဲ့ မြှောက်ပါမယ်
+        const itemTotal = item.price * item.qty;
+        itemDetails += `${item.name} - ${item.price}ks x ${item.qty} = ${itemTotal}ks\n`;
+    });
 
-// မင်းလိုချင်တဲ့ Format အတိုင်း စာသားတည်ဆောက်ခြင်း
-const telegramText = `🔔 <b>အော်ဒါအသစ် ရောက်ရှိလာပါပြီ!</b>\n\n` +
-             `👤 <b>အမည်:</b> ${name}\n\n` +
-             `📞 <b>ဖုန်း:</b> ${phone}\n\n` +
-             `📅 <b>Date:</b> ${document.getElementById('pickup-date').value}    🕒 <b>Time:</b> ${document.getElementById('pickup-time').value}\n\n` +
-             `🛒 <b>မှာယူထားသည်များ:</b>\n\n` +
-             `<b>Name               price         quantity      total</b>\n` +
-             `--------------------------------------------------\n` +
-             `${itemDetails}\n` +
-             `💰 <b>စုစုပေါင်းကျသင့်ငွေ: ${total.toLocaleString()} ks</b>\n\n` +
-             `✅ <a href="https://yewin5375.github.io/YeNaingSoe-/admin.html">Admin Dashboard</a>`;
+    const telegramText = `🔔 <b>အော်ဒါအသစ် ရောက်ရှိလာပါပြီ!</b>\n\n` +
+                 `👤 <b>အမည်:</b> ${name}\n\n` +
+                 `📞 <b>ဖုန်း:</b> ${phone}\n\n` +
+                 `📅 <b>Date:</b> ${document.getElementById('pickup-date').value}    🕒 <b>Time:</b> ${document.getElementById('pickup-time').value}\n\n` +
+                 `🛒 <b>မှာယူထားသည်များ:</b>\n\n` +
+                 `<b>Name               price         quantity      total</b>\n` +
+                 `--------------------------------------------------\n` +
+                 `${itemDetails}\n` +
+                 `💰 <b>စုစုပေါင်းကျသင့်ငွေ: ${total.toLocaleString()} ks</b>\n\n` +
+                 `✅ <a href="https://yewin5375.github.io/YeNaingSoe-/admin.html">Admin Dashboard</a>`;
 
-// Telegram API သို့ ပို့ခြင်း
-fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, parse_mode: 'HTML', text: telegramText })
-});
+    await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: telegramChatId,
+            parse_mode: 'HTML',
+            text: telegramText
+        })
+    });
+    console.log("Telegram Notification Sent Successfully");
+} catch (err) {
+    console.error("Telegram Error:", err);
+}
 // ---------------------------------------
+            
             
             alert("Order တင်ခြင်း အောင်မြင်ပါသည်။ ကျေးဇူးတင်ပါတယ်။");
             // အော်ဒါတင်ပြီးတာနဲ့ ဖုန်းနံပါတ်ကို search box မှာ ထည့်ပြီး tracking window ဖွင့်ပေးမယ်
