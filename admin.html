@@ -95,22 +95,35 @@
         let orders = [], currentFilter = 'not_confirm';
 
         // --- AUTH SECTION ---
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('admin-content').classList.remove('hidden');
-                fetchData();
-            } else {
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('admin-content').classList.add('hidden');
-            }
-        });
+        // --- AUTH SECTION ---
+// သင့် Gmail အမှန်ကို ဒီမှာ အစားထိုးပါ
+const ADMIN_EMAIL = "yewin5375@gmail.com"; 
 
-        function loginWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider);
+auth.onAuthStateChanged(user => {
+    if (user) {
+        if (user.email === ADMIN_EMAIL) {
+            // Admin ဟုတ်ရင် Panel ကို ပြမယ်
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('admin-content').classList.remove('hidden');
+            fetchData(); // Data တွေ ဆွဲထုတ်မယ်
+        } else {
+            // တခြားသူဆိုရင် ပေးမဝင်ဘူး
+            Swal.fire({
+                icon: 'error',
+                title: 'Access Denied',
+                text: 'သင်သည် Admin မဟုတ်ပါ။',
+                confirmButtonColor: '#F97316'
+            }).then(() => {
+                auth.signOut();
+            });
         }
-        function logout() { auth.signOut(); }
+    } else {
+        // Login မဝင်ရသေးရင် Login Screen ကို ပြထားမယ်
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('admin-content').classList.add('hidden');
+    }
+});
+        
 
         // --- DATA SECTION ---
         function fetchData() {
