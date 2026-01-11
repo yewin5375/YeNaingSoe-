@@ -12,8 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fdfcfb; }
-        .google-btn { background: white; border: 1px solid #dadce0; color: #3c4043; transition: background-color .218s, border-color .218s, box-shadow .218s; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fdfcfb; color: #1e293b; }
+        .google-btn { background: white; border: 1px solid #dadce0; color: #3c4043; transition: all 0.2s; }
+        .google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 2px rgba(60,64,67,0.3); }
         .nav-active { color: #f97316; font-weight: 800; border-bottom: 3px solid #f97316; }
         .card-shadow { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
         #order-bell { animation: ring 2s infinite; }
@@ -24,7 +25,9 @@
 
     <div id="login-screen" class="fixed inset-0 z-[2000] bg-slate-900 flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-10 text-center shadow-2xl">
-            <h2 class="text-2xl font-black mb-6">Staff Only</h2>
+            <img src="https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" class="h-8 mx-auto mb-6">
+            <h2 class="text-xl font-bold mb-2">Admin Dashboard</h2>
+            <p class="text-slate-500 text-sm mb-8">Sign in with your Google account to continue</p>
             <button onclick="loginWithGoogle()" class="google-btn w-full flex items-center justify-center gap-3 py-3 rounded-lg font-bold">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-5 h-5">
                 Sign in with Google
@@ -33,11 +36,14 @@
     </div>
 
     <div id="admin-content" class="hidden">
-        <header class="bg-white border-b sticky top-0 z-[100] px-6 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-black italic text-orange-600">BBQ<span class="text-slate-900">.PRO</span></h1>
+        <header class="bg-white border-b sticky top-0 z-[100] px-6 py-4 flex justify-between items-center shadow-sm">
+            <div>
+                <h1 class="text-xl font-black italic text-orange-600 leading-none">BBQ<span class="text-slate-900">.PRO</span></h1>
+                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Management System</p>
+            </div>
             <div class="flex items-center gap-4">
-                <img id="admin-profile" src="" class="w-9 h-9 rounded-full border">
-                <button onclick="logout()" class="text-xs font-bold text-red-500">LOGOUT</button>
+                <img id="admin-profile" src="" class="w-9 h-9 rounded-full border-2 border-orange-100">
+                <button onclick="logout()" class="text-xs font-bold text-red-500 hover:underline">LOGOUT</button>
             </div>
         </header>
 
@@ -46,22 +52,22 @@
             <section id="tab-dashboard" class="space-y-6">
                 <div class="grid grid-cols-2 gap-4 text-white">
                     <div class="bg-slate-900 p-5 rounded-[2rem] card-shadow">
-                        <p class="text-[10px] opacity-60 font-bold uppercase">Total Revenue</p>
+                        <p class="text-[10px] opacity-60 font-bold uppercase tracking-widest">Total Revenue</p>
                         <h2 id="stat-revenue" class="text-xl font-black">0 Ks</h2>
                     </div>
                     <div class="bg-orange-500 p-5 rounded-[2rem] card-shadow">
-                        <p class="text-[10px] opacity-80 font-bold uppercase">Orders</p>
+                        <p class="text-[10px] opacity-80 font-bold uppercase tracking-widest">Live Orders</p>
                         <h2 id="stat-orders" class="text-xl font-black">0</h2>
                     </div>
                 </div>
 
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 card-shadow">
-                    <h3 class="text-sm font-black mb-4 uppercase">Revenue Analysis</h3>
-                    <canvas id="revenueChart" height="200"></canvas>
+                    <h3 class="text-xs font-black mb-4 uppercase text-slate-400">7-Day Revenue Analysis</h3>
+                    <canvas id="revenueChart" height="180"></canvas>
                 </div>
 
                 <div class="space-y-3">
-                    <h3 class="text-sm font-black flex items-center gap-2">NEW ORDERS <span id="order-bell">🔔</span></h3>
+                    <h3 class="text-sm font-black flex items-center gap-2">LATEST ORDERS <span id="order-bell">🔔</span></h3>
                     <div id="dashboard-new-orders" class="space-y-3"></div>
                 </div>
             </section>
@@ -69,51 +75,63 @@
             <section id="tab-orders" class="hidden space-y-4">
                 <div class="flex bg-slate-100 p-1 rounded-2xl gap-1">
                     <button onclick="changeFilter('not_confirm')" id="btn-not_confirm" class="status-tab active flex-1 py-3 text-[10px] font-black rounded-xl bg-white shadow">NEW</button>
-                    <button onclick="changeFilter('pending')" id="btn-pending" class="status-tab flex-1 py-3 text-[10px] font-black rounded-xl">PENDING</button>
-                    <button onclick="changeFilter('ready')" id="btn-ready" class="status-tab flex-1 py-3 text-[10px] font-black rounded-xl">READY</button>
+                    <button onclick="changeFilter('pending')" id="btn-pending" class="status-tab flex-1 py-3 text-[10px] font-black rounded-xl text-slate-500">PENDING</button>
+                    <button onclick="changeFilter('ready')" id="btn-ready" class="status-tab flex-1 py-3 text-[10px] font-black rounded-xl text-slate-500">READY</button>
                 </div>
                 <div id="order-list" class="space-y-4"></div>
             </section>
 
             <section id="tab-menu" class="hidden space-y-4">
-                <button onclick="openMenuModal()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black">+ ADD NEW MENU</button>
-                <div id="admin-menu-list" class="space-y-2"></div>
+                <button onclick="openMenuModal()" class="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black text-sm shadow-xl">+ ADD NEW ITEM</button>
+                <div id="admin-menu-list" class="grid grid-cols-1 gap-3"></div>
             </section>
-
         </main>
     </div>
 
     <div id="menu-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 space-y-4">
-            <h3 class="text-lg font-black">Item Configuration</h3>
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 space-y-4 shadow-2xl">
+            <h3 class="text-xl font-black text-center">Menu Setup</h3>
+            
             <div class="flex flex-col items-center gap-2">
-                <img id="m-preview" src="https://placehold.co/100" class="w-20 h-20 rounded-2xl object-cover border-2 border-dashed">
-                <input type="file" onchange="uploadToImgBB(this)" class="hidden" id="m-file">
-                <button onclick="document.getElementById('m-file').click()" class="text-[10px] font-black text-orange-500 uppercase">Upload Photo</button>
+                <div class="relative group">
+                    <img id="m-preview" src="https://placehold.co/200?text=Pick+Image" class="w-24 h-24 rounded-3xl object-cover border-4 border-slate-50 shadow-md">
+                    <button onclick="document.getElementById('m-file').click()" class="absolute -bottom-2 -right-2 bg-orange-500 text-white p-2 rounded-xl shadow-lg">
+                        📷
+                    </button>
+                </div>
+                <input type="file" id="m-file" accept="image/*" class="hidden" onchange="uploadToImgBB(this)">
                 <input type="hidden" id="m-image-url">
-                <div id="upload-status" class="hidden text-[9px] font-bold">Uploading...</div>
+                <p id="upload-status" class="hidden text-[10px] font-bold text-orange-500 animate-pulse">UPLOADING IMAGE...</p>
             </div>
-            <input type="text" id="m-name" placeholder="Item Name" class="w-full p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold">
-            <select id="m-category" class="w-full p-4 rounded-xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold">
-                <option value="အသားကင်">အသားကင်</option>
-                <option value="အအေး">အအေး</option>
-                <option value="ဟင်းပွဲ">ဟင်းပွဲ</option>
-            </select>
-            <div class="grid grid-cols-2 gap-2">
-                <input type="number" id="m-price" placeholder="Price" class="p-4 rounded-xl bg-slate-50 ring-1 ring-slate-100 font-bold">
-                <input type="number" id="m-stock" placeholder="Stock" class="p-4 rounded-xl bg-slate-50 ring-1 ring-slate-100 font-bold">
+
+            <div class="space-y-3">
+                <input type="text" id="m-name" placeholder="Item Name" class="w-full p-4 rounded-2xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold focus:ring-2 focus:ring-orange-500 transition-all outline-none">
+                
+                <select id="m-category" class="w-full p-4 rounded-2xl bg-slate-50 border-none ring-1 ring-slate-100 font-bold focus:ring-2 focus:ring-orange-500 outline-none">
+                    <option value="အသားကင်">🔥 အသားကင်</option>
+                    <option value="အသုတ်">🥗 အသုတ်</option>
+                    <option value="ဟင်းပွဲ">🍲 ဟင်းပွဲ</option>
+                    <option value="အအေး">🥤 အအေး/ဘီယာ</option>
+                    <option value="အခြား">✨ အခြား</option>
+                </select>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="m-price" placeholder="Price (Ks)" class="p-4 rounded-2xl bg-slate-50 ring-1 ring-slate-100 font-bold focus:ring-2 focus:ring-orange-500 outline-none">
+                    <input type="number" id="m-stock" placeholder="Stock" class="p-4 rounded-2xl bg-slate-50 ring-1 ring-slate-100 font-bold focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="closeMenuModal()" class="flex-1 py-4 font-black text-slate-400">Cancel</button>
-                <button onclick="saveMenu()" id="save-btn" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-black">Save Now</button>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeMenuModal()" class="flex-1 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancel</button>
+                <button onclick="saveMenu()" id="save-btn" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg">SAVE ITEM</button>
             </div>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-white border-t flex items-center justify-around px-2 z-[90]">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-text nav-active text-[10px] py-2 px-4 uppercase tracking-tighter">Dashboard</button>
-        <button onclick="switchTab('orders')" id="nav-orders" class="nav-text text-[10px] py-2 px-4 uppercase tracking-tighter">Orders</button>
-        <button onclick="switchTab('menu')" id="nav-menu" class="nav-text text-[10px] py-2 px-4 uppercase tracking-tighter">Menu</button>
+    <nav class="fixed bottom-6 left-6 right-6 h-20 bg-white/90 backdrop-blur-xl border border-white/20 rounded-[2.5rem] shadow-2xl flex items-center justify-around px-2 z-[90]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-text nav-active text-[10px] font-black py-2 px-4 uppercase tracking-tighter">Dash</button>
+        <button onclick="switchTab('orders')" id="nav-orders" class="nav-text text-[10px] font-black py-2 px-4 uppercase tracking-tighter">Orders</button>
+        <button onclick="switchTab('menu')" id="nav-menu" class="nav-text text-[10px] font-black py-2 px-4 uppercase tracking-tighter">Menu</button>
     </nav>
 
     <audio id="notiSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
@@ -136,14 +154,13 @@
 
         let orders = [], menus = [], currentFilter = 'not_confirm', chart = null;
 
-        // --- AUTH ---
+        // --- AUTH SECTION ---
         auth.onAuthStateChanged(user => {
             if (user && user.email === ADMIN_EMAIL) {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('admin-content').classList.remove('hidden');
                 document.getElementById('admin-profile').src = user.photoURL;
-                if (!("Notification" in window)) alert("Browser doesn't support noti");
-                else Notification.requestPermission();
+                Notification.requestPermission();
                 fetchData();
             } else {
                 if (user) auth.signOut();
@@ -154,19 +171,16 @@
         function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
         function logout() { auth.signOut(); }
 
-        // --- FETCH & REALTIME ---
+        // --- DATA FETCHING ---
         function fetchData() {
             db.ref('orders').on('value', s => {
                 const prevCount = orders.length;
                 const d = s.val();
                 orders = d ? Object.keys(d).map(id => ({ id, ...d[id] })).reverse() : [];
                 
-                // New Order Notification Logic
                 if (orders.length > prevCount && prevCount !== 0) {
-                    const latest = orders[0];
-                    if (latest.status === 'not_confirm') triggerAlert(latest);
+                    if (orders[0].status === 'not_confirm') triggerAlert(orders[0]);
                 }
-                
                 updateUI();
                 renderGraph();
             });
@@ -180,97 +194,102 @@
         function triggerAlert(order) {
             document.getElementById('notiSound').play();
             if (Notification.permission === "granted") {
-                new Notification("Order အသစ်တက်လာပါပြီ!", {
-                    body: `${order.customer_name} ထံမှ ${order.total_amount} Ks ဖိုးမှာယူထားပါသည်`,
-                    icon: "https://cdn-icons-png.flaticon.com/512/3502/3502601.png"
-                });
+                new Notification("New Order!", { body: `${order.customer_name} ordered ${order.total_amount} Ks` });
             }
-            Swal.fire({ title: 'New Order!', text: `${order.customer_name} just ordered.`, icon: 'info', toast: true, position: 'top-end', showConfirmButton: false, timer: 5000 });
+            Swal.fire({ title: 'New Order!', text: `${order.customer_name} ထံမှ order အသစ်ဝင်လာပါပြီ`, icon: 'info', toast: true, position: 'top-end', timer: 4000 });
         }
 
         function updateUI() {
             document.getElementById('stat-revenue').innerText = orders.reduce((s,o)=>s+o.total_amount,0).toLocaleString() + " Ks";
-            document.getElementById('stat-orders').innerText = orders.length;
+            document.getElementById('stat-orders').innerText = orders.filter(o => o.status !== 'ready').length;
             
-            // Dashboard New Orders
             const news = orders.filter(o => o.status === 'not_confirm').slice(0, 3);
-            document.getElementById('dashboard-new-orders').innerHTML = news.map(o => `
-                <div class="bg-white p-4 rounded-2xl border-l-4 border-orange-500 shadow-sm flex justify-between items-center">
-                    <div><p class="font-black text-sm">${o.customer_name}</p><p class="text-xs font-bold text-slate-400">${o.total_amount} Ks</p></div>
-                    <button onclick="switchTab('orders')" class="text-[10px] font-black text-orange-500 uppercase">View</button>
+            document.getElementById('dashboard-new-orders').innerHTML = news.length ? news.map(o => `
+                <div class="bg-white p-4 rounded-3xl border border-slate-50 shadow-sm flex justify-between items-center animate-pulse">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <div><p class="font-black text-sm">${o.customer_name}</p><p class="text-[10px] font-bold text-slate-400">${o.total_amount} Ks</p></div>
+                    </div>
+                    <button onclick="switchTab('orders')" class="text-[10px] font-black text-orange-500">MANAGE</button>
                 </div>
-            `).join('');
+            `).join('') : `<p class="text-center text-slate-300 text-xs py-4">No active orders</p>`;
 
             renderOrders();
         }
 
-        // --- GRAPH ---
+        // --- GRAPH LOGIC ---
         function renderGraph() {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             const dailyData = {};
-            orders.slice(0, 7).forEach(o => {
-                const date = new Date(o.created_at).toLocaleDateString();
-                dailyData[date] = (dailyData[date] || 0) + o.total_amount;
-            });
+            const labels = [];
+            const data = [];
+
+            // Get last 7 days
+            for(let i=6; i>=0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dayStr = d.toLocaleDateString('en-US', {weekday: 'short'});
+                labels.push(dayStr);
+                
+                const dayTotal = orders
+                    .filter(o => new Date(o.created_at).toDateString() === d.toDateString())
+                    .reduce((s,o) => s + o.total_amount, 0);
+                data.push(dayTotal);
+            }
 
             if (chart) chart.destroy();
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: Object.keys(dailyData),
-                    datasets: [{ label: 'Revenue', data: Object.values(dailyData), borderColor: '#f97316', tension: 0.4, fill: true, backgroundColor: 'rgba(249, 115, 22, 0.1)' }]
+                    labels: labels,
+                    datasets: [{
+                        label: 'Daily Revenue',
+                        data: data,
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0
+                    }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
             });
-        }
-
-        // --- ORDER TAB RENDER ---
-        function renderOrders() {
-            const filtered = orders.filter(o => o.status === currentFilter);
-            document.getElementById('order-list').innerHTML = filtered.map(o => `
-                <div class="bg-white p-5 rounded-[2rem] border border-slate-100 card-shadow">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-[10px] font-black text-orange-500">#${o.id.slice(-6)}</span>
-                        <span class="text-[9px] font-bold text-slate-400">${new Date(o.created_at).toLocaleTimeString()}</span>
-                    </div>
-                    <h4 class="font-black text-base mb-2">${o.customer_name}</h4>
-                    <div class="space-y-1 mb-4">
-                        ${o.items.map(i => `<div class="flex justify-between text-xs font-bold text-slate-500"><span>${i.name} x${i.qty}</span><span>${i.price*i.qty}</span></div>`).join('')}
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <p class="text-lg font-black">${o.total_amount.toLocaleString()} Ks</p>
-                        ${o.status==='not_confirm'? `<button onclick="updateStatus('${o.id}','pending')" class="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-black">Accept</button>`:''}
-                        ${o.status==='pending'? `<button onclick="updateStatus('${o.id}','ready')" class="bg-orange-500 text-white px-5 py-2 rounded-xl text-xs font-black">Ready</button>`:''}
-                    </div>
-                </div>
-            `).join('');
         }
 
         // --- MENU LOGIC ---
         function renderMenus() {
             document.getElementById('admin-menu-list').innerHTML = menus.map(m => `
-                <div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-slate-50 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <img src="${m.image_url}" class="w-12 h-12 rounded-xl object-cover">
+                <div class="bg-white p-4 rounded-3xl flex items-center justify-between border border-slate-100 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <img src="${m.image_url}" class="w-14 h-14 object-cover rounded-2xl shadow-sm">
                         <div>
-                            <p class="font-black text-sm">${m.name}</p>
-                            <p class="text-[9px] font-bold text-orange-500 uppercase">${m.category} | ${m.price} Ks</p>
+                            <p class="font-black text-slate-800 text-sm">${m.name}</p>
+                            <p class="text-[9px] font-bold text-orange-500 uppercase tracking-tighter">${m.category} • ${m.price} Ks • Stock: ${m.stock}</p>
                         </div>
                     </div>
-                    <button onclick="deleteMenu('${m.id}')" class="text-red-400 p-2">🗑</button>
+                    <button onclick="deleteMenu('${m.id}')" class="bg-red-50 text-red-400 p-2.5 rounded-xl">🗑</button>
                 </div>
             `).join('');
         }
 
         async function uploadToImgBB(input) {
             if (!input.files[0]) return;
-            document.getElementById('upload-status').classList.remove('hidden');
+            const status = document.getElementById('upload-status');
+            status.classList.remove('hidden');
             const fd = new FormData(); fd.append("image", input.files[0]);
-            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: "POST", body: fd });
-            const data = await res.json();
-            document.getElementById('m-image-url').value = data.data.url;
-            document.getElementById('m-preview').src = data.data.url;
-            document.getElementById('upload-status').classList.add('hidden');
+            try {
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: "POST", body: fd });
+                const result = await res.json();
+                document.getElementById('m-image-url').value = result.data.url;
+                document.getElementById('m-preview').src = result.data.url;
+            } finally { status.classList.add('hidden'); }
         }
 
         async function saveMenu() {
@@ -278,13 +297,51 @@
             const price = parseInt(document.getElementById('m-price').value);
             const cat = document.getElementById('m-category').value;
             const img = document.getElementById('m-image-url').value;
-            if(!name || !price || !img) return Swal.fire('Error','Complete all fields','warning');
+            const stock = parseInt(document.getElementById('m-stock').value || 0);
+
+            if(!name || !price || !img) return Swal.fire('Warning','Please fill all fields','warning');
             
-            await db.ref('menus').push({ name, price, category: cat, image_url: img, stock: parseInt(document.getElementById('m-stock').value || 0) });
-            closeMenuModal();
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true; btn.innerText = "SAVING...";
+
+            try {
+                await db.ref('menus').push({ name, price, category: cat, image_url: img, stock });
+                closeMenuModal();
+                Swal.fire({ icon: 'success', title: 'Menu Added', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+            } catch(e) {
+                alert("Error saving: " + e.message);
+            } finally {
+                btn.disabled = false; btn.innerText = "SAVE ITEM";
+            }
         }
 
-        // --- GENERAL HELPERS ---
+        // --- ORDER MANAGEMENT ---
+        function renderOrders() {
+            const filtered = orders.filter(o => o.status === currentFilter);
+            document.getElementById('order-list').innerHTML = filtered.length ? filtered.map(o => `
+                <div class="bg-white p-5 rounded-[2.5rem] border border-slate-100 card-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-[9px] font-black text-orange-500 uppercase">#${o.id.slice(-6)}</p>
+                            <h4 class="font-black text-lg">${o.customer_name}</h4>
+                            <p class="text-[10px] font-bold text-slate-400">${new Date(o.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2 mb-4 border-y border-slate-50 py-3">
+                        ${o.items.map(i => `<div class="flex justify-between text-xs font-bold"><span>${i.name} x${i.qty}</span><span>${i.price*i.qty} Ks</span></div>`).join('')}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <p class="text-xl font-black">${o.total_amount.toLocaleString()} Ks</p>
+                        <div class="flex gap-2">
+                            ${o.status==='not_confirm'? `<button onclick="updateStatus('${o.id}','pending')" class="bg-slate-900 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg">Accept</button>`:''}
+                            ${o.status==='pending'? `<button onclick="updateStatus('${o.id}','ready')" class="bg-orange-500 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-orange-100">Ready</button>`:''}
+                        </div>
+                    </div>
+                </div>
+            `).join('') : `<div class="text-center py-20 text-slate-300 font-bold">No orders in this section</div>`;
+        }
+
+        // --- TAB & FILTER HELPERS ---
         function switchTab(t) {
             ['dashboard', 'orders', 'menu'].forEach(id => document.getElementById('tab-'+id).classList.add('hidden'));
             document.getElementById('tab-'+t).classList.remove('hidden');
@@ -293,15 +350,24 @@
         }
         function changeFilter(s) {
             currentFilter = s;
-            document.querySelectorAll('.status-tab').forEach(b => { b.classList.remove('active','bg-white','shadow'); b.classList.add('text-slate-400'); });
+            document.querySelectorAll('.status-tab').forEach(b => {
+                b.classList.remove('active','bg-white','shadow');
+                b.classList.add('text-slate-500');
+            });
             const btn = document.getElementById('btn-'+s);
-            btn.classList.add('active','bg-white','shadow'); btn.classList.remove('text-slate-400');
+            btn.classList.add('active','bg-white','shadow');
+            btn.classList.remove('text-slate-500');
             renderOrders();
         }
-        function openMenuModal() { document.getElementById('menu-modal').classList.remove('hidden'); }
+        function openMenuModal() { 
+            document.getElementById('menu-modal').classList.remove('hidden'); 
+            document.getElementById('m-preview').src = "https://placehold.co/200?text=Pick+Image";
+        }
         function closeMenuModal() { document.getElementById('menu-modal').classList.add('hidden'); }
         async function updateStatus(id, s) { await db.ref('orders/'+id).update({status: s}); }
-        async function deleteMenu(id) { if(confirm('Delete this item?')) await db.ref('menus/'+id).remove(); }
+        async function deleteMenu(id) { 
+            if(confirm('Delete this item?')) await db.ref('menus/'+id).remove(); 
+        }
     </script>
 </body>
 </html>
